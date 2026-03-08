@@ -132,11 +132,13 @@ export const getOrders = async (req, res) => {
     if (req.query.category) filter.category = req.query.category;
     if (req.query.region) filter.region = req.query.region;
     if (req.query.segment) filter.segment = req.query.segment;
+    if (req.query.shipMode) filter.shipMode = req.query.shipMode;
     if (req.query.search) {
       filter.$or = [
         { orderId: new RegExp(req.query.search, 'i') },
         { customerName: new RegExp(req.query.search, 'i') },
-        { productName: new RegExp(req.query.search, 'i') }
+        { productName: new RegExp(req.query.search, 'i') },
+        { state: new RegExp(req.query.search, 'i') }
       ];
     }
 
@@ -153,7 +155,7 @@ export const getOrders = async (req, res) => {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit)
       }
     });
   } catch (error) {

@@ -173,7 +173,7 @@ export default function OrdersView() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Refresh Button */}
+      {/* Header with Download and Refresh Buttons */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">Orders Management</h2>
         <div className="flex gap-3">
@@ -196,13 +196,6 @@ export default function OrdersView() {
         </div>
       </div>
 
-      {/* Header 
-  };
-
-  const hasActiveFilters = Object.values(filters).some(v => v !== '');
-
-  return (
-    <div className="space-y-6">
       {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
