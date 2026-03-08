@@ -4,7 +4,7 @@ import { Package, TrendingUp, TrendingDown, AlertCircle, BarChart3, Download } f
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function InventoryView() {
   const [loading, setLoading] = useState(true);
@@ -45,68 +45,85 @@ export default function InventoryView() {
   };
 
   const downloadPDF = () => {
-    const doc = new jsPDF();
-    const topProducts = inventoryData.topProducts || [];
-    
-    // Add title
-    doc.setFontSize(20);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Inventory Report', 14, 20);
-    
-    // Add date
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    })}`, 14, 28);
-    
-    // Add summary section
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Summary', 14, 40);
-    
-    doc.setFontSize(10);
-    doc.text(`Total Unique Products: ${formatNumber(inventoryData.totalProducts || 0)}`, 14, 48);
-    doc.text(`Total Quantity: ${formatNumber(inventoryData.totalQuantity || 0)}`, 14, 54);
-    doc.text(`Total Value: ${formatCurrency(inventoryData.totalValue || 0)}`, 14, 60);
-    doc.text(`Average Unit Price: ${formatCurrency(inventoryData.avgPrice || 0)}`, 14, 66);
-    
-    // Add all products table
-    doc.setFontSize(14);
-    doc.text('All Products', 14, 78);
-    
-    const tableData = topProducts.map((product, index) => [
-      index + 1,
-      product.productName,
-      product.category,
-      formatNumber(product.quantity),
-      formatCurrency(product.totalSales),
-      formatCurrency(product.totalProfit)
-    ]);
-    
-    doc.autoTable({
-      startY: 82,
-      head: [['#', 'Product Name', 'Category', 'Qty Sold', 'Sales', 'Profit']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 9, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 8 },
-      columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 20, halign: 'right' },
-        4: { cellWidth: 30, halign: 'right' },
-        5: { cellWidth: 30, halign: 'right' }
-      },
-      margin: { top: 82, left: 14, right: 14 }
-    });
-    
-    // Save the PDF
-    doc.save(`Inventory_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success('PDF downloaded successfully!');
+    try {
+      console.log('Starting Inventory PDF generation...');
+      
+      const doc = new jsPDF();
+      console.log('jsPDF instance created');
+      console.log('autoTable available:', typeof doc.autoTable);
+      
+      const topProducts = inventoryData.topProducts || [];
+      console.log('Products count:', topProducts.length);
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Inventory Report', 14, 20);
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}`, 14, 28);
+      
+      // Add summary section
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Summary', 14, 40);
+      
+      doc.setFontSize(10);
+      doc.text(`Total Unique Products: ${formatNumber(inventoryData.totalProducts || 0)}`, 14, 48);
+      doc.text(`Total Quantity: ${formatNumber(inventoryData.totalQuantity || 0)}`, 14, 54);
+      doc.text(`Total Value: ${formatCurrency(inventoryData.totalValue || 0)}`, 14, 60);
+      doc.text(`Average Unit Price: ${formatCurrency(inventoryData.avgPrice || 0)}`, 14, 66);
+      
+      // Add all products table
+      doc.setFontSize(14);
+      doc.text('All Products', 14, 78);
+      
+      const tableData = topProducts.map((product, index) => [
+        index + 1,
+        product.productName,
+        product.category,
+        formatNumber(product.quantity),
+        formatCurrency(product.totalSales),
+        formatCurrency(product.totalProfit)
+      ]);
+      
+      console.log('Table data prepared:', tableData.length, 'rows');
+      
+      doc.autoTable({
+        startY: 82,
+        head: [['#', 'Product Name', 'Category', 'Qty Sold', 'Sales', 'Profit']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 10 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 20, halign: 'right' },
+          4: { cellWidth: 30, halign: 'right' },
+          5: { cellWidth: 30, halign: 'right' }
+        },
+        margin: { top: 82, left: 14, right: 14 }
+      });
+      
+      console.log('Table added to PDF');
+      
+      // Save the PDF
+      const filename = `Inventory_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      console.log('PDF saved:', filename);
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Inventory PDF generation error:', error);
+      toast.error(`Failed to generate PDF: ${error.message}`);
+    }
   };
 
   if (loading) {

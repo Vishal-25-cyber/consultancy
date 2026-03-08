@@ -4,7 +4,7 @@ import { BarChart, Bar, LineChart, Line, AreaChart, Area, ScatterChart, Scatter,
 import { TrendingUp, TrendingDown, Filter, Calendar, Percent, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function AnalyticsView() {
   const [loading, setLoading] = useState(true);
@@ -65,117 +65,141 @@ export default function AnalyticsView() {
   };
 
   const downloadPDF = () => {
-    const doc = new jsPDF();
-    
-    // Add title
-    doc.setFontSize(20);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Analytics Report', 14, 20);
-    
-    // Add date and filters
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
-    doc.text(`Category: ${selectedCategory === 'all' ? 'All Categories' : selectedCategory}`, 14, 34);
-    doc.text(`Region: ${selectedRegion === 'all' ? 'All Regions' : selectedRegion}`, 14, 40);
-    
-    // Add Key Metrics
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Key Metrics', 14, 52);
-    
-    doc.setFontSize(10);
-    doc.text(`Total Sales: ${formatCurrency(analyticsData.sales?.totalSales || 0)}`, 14, 60);
-    doc.text(`Profit Margin: ${((analyticsData.profit?.avgMargin || 0) * 100).toFixed(1)}%`, 14, 66);
-    doc.text(`Products Sold: ${(analyticsData.products?.totalProducts || 0).toLocaleString()}`, 14, 72);
-    doc.text(`Active Customers: ${(analyticsData.customers?.totalCustomers || 0).toLocaleString()}`, 14, 78);
-    
-    // Add Category Performance
-    doc.setFontSize(14);
-    doc.text('Category Performance', 14, 90);
-    
-    const categoryData = categoryStats.map((cat) => [
-      cat._id,
-      formatCurrency(cat.sales),
-      formatCurrency(cat.profit),
-      `${((cat.profit / cat.sales) * 100).toFixed(1)}%`
-    ]);
-    
-    doc.autoTable({
-      startY: 94,
-      head: [['Category', 'Sales', 'Profit', 'Margin']],
-      body: categoryData,
-      theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 10, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 9 },
-      columnStyles: {
-        1: { halign: 'right' },
-        2: { halign: 'right' },
-        3: { halign: 'right' }
-      }
-    });
-    
-    // Add Regional Performance
-    const finalY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(14);
-    doc.text('Regional Performance', 14, finalY);
-    
-    const regionData = regionStats.map((region) => [
-      region._id,
-      formatCurrency(region.sales),
-      formatCurrency(region.profit),
-      region.orders.toLocaleString(),
-      `${((region.profit / region.sales) * 100).toFixed(1)}%`
-    ]);
-    
-    doc.autoTable({
-      startY: finalY + 4,
-      head: [['Region', 'Sales', 'Profit', 'Orders', 'Margin']],
-      body: regionData,
-      theme: 'striped',
-      headStyles: { fillColor: [34, 197, 94], textColor: 255, fontSize: 10, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 9 },
-      columnStyles: {
-        1: { halign: 'right' },
-        2: { halign: 'right' },
-        3: { halign: 'right' },
-        4: { halign: 'right' }
-      }
-    });
-    
-    // Add Top Products on new page if needed
-    if (profitableProducts.length > 0) {
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.text('Top 10 Most Profitable Products', 14, 20);
+    try {
+      console.log('Starting Analytics PDF generation...');
+      console.log('Analytics data available:', !!analyticsData.sales);
       
-      const profitableData = profitableProducts.map((product, idx) => [
-        idx + 1,
-        product.productName,
-        product.category,
-        formatCurrency(product.totalProfit),
-        `${product.profitMargin}%`
+      const doc = new jsPDF();
+      console.log('jsPDF instance created');
+      console.log('autoTable available:', typeof doc.autoTable);
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Analytics Report', 14, 20);
+      
+      // Add date and filters
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
+      doc.text(`Category: ${selectedCategory === 'all' ? 'All Categories' : selectedCategory}`, 14, 34);
+      doc.text(`Region: ${selectedRegion === 'all' ? 'All Regions' : selectedRegion}`, 14, 40);
+      
+      // Add Key Metrics
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Key Metrics', 14, 52);
+      
+      doc.setFontSize(10);
+      doc.text(`Total Sales: ${formatCurrency(analyticsData.sales?.totalSales || 0)}`, 14, 60);
+      doc.text(`Profit Margin: ${((analyticsData.profit?.avgMargin || 0) * 100).toFixed(1)}%`, 14, 66);
+      doc.text(`Products Sold: ${(analyticsData.products?.totalProducts || 0).toLocaleString()}`, 14, 72);
+      doc.text(`Active Customers: ${(analyticsData.customers?.totalCustomers || 0).toLocaleString()}`, 14, 78);
+      
+      // Add Category Performance
+      doc.setFontSize(14);
+      doc.text('Category Performance', 14, 90);
+      
+      const categoryData = categoryStats.map((cat) => [
+        cat._id,
+        formatCurrency(cat.sales),
+        formatCurrency(cat.profit),
+        `${((cat.profit / cat.sales) * 100).toFixed(1)}%`
       ]);
       
+      console.log('Category data prepared:', categoryData.length, 'rows');
+      
       doc.autoTable({
-        startY: 24,
-        head: [['#', 'Product', 'Category', 'Profit', 'Margin']],
-        body: profitableData,
+        startY: 94,
+        head: [['Category', 'Sales', 'Profit', 'Margin']],
+        body: categoryData,
         theme: 'striped',
-        headStyles: { fillColor: [16, 185, 129], textColor: 255, fontSize: 10, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 8 },
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 9 },
         columnStyles: {
-          0: { cellWidth: 10 },
-          1: { cellWidth: 80 },
+          1: { halign: 'right' },
+          2: { halign: 'right' },
+          3: { halign: 'right' }
+        }
+      });
+      
+      console.log('Category table added');
+      
+      // Add Regional Performance
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(14);
+      doc.text('Regional Performance', 14, finalY);
+      
+      const regionData = regionStats.map((region) => [
+        region._id,
+        formatCurrency(region.sales),
+        formatCurrency(region.profit),
+        region.orders.toLocaleString(),
+        `${((region.profit / region.sales) * 100).toFixed(1)}%`
+      ]);
+      
+      console.log('Region data prepared:', regionData.length, 'rows');
+      
+      doc.autoTable({
+        startY: finalY + 4,
+        head: [['Region', 'Sales', 'Profit', 'Orders', 'Margin']],
+        body: regionData,
+        theme: 'striped',
+        headStyles: { fillColor: [34, 197, 94], textColor: 255, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 9 },
+        columnStyles: {
+          1: { halign: 'right' },
+          2: { halign: 'right' },
           3: { halign: 'right' },
           4: { halign: 'right' }
         }
       });
+      
+      console.log('Region table added');
+      
+      // Add Top Products on new page if needed
+      if (profitableProducts.length > 0) {
+        doc.addPage();
+        doc.setFontSize(14);
+        doc.text('Top 10 Most Profitable Products', 14, 20);
+        
+        const profitableData = profitableProducts.map((product, idx) => [
+          idx + 1,
+          product.productName,
+          product.category,
+          formatCurrency(product.totalProfit),
+          `${product.profitMargin}%`
+        ]);
+        
+        console.log('Top products data prepared:', profitableData.length, 'rows');
+        
+        doc.autoTable({
+          startY: 24,
+          head: [['#', 'Product', 'Category', 'Profit', 'Margin']],
+          body: profitableData,
+          theme: 'striped',
+          headStyles: { fillColor: [16, 185, 129], textColor: 255, fontSize: 10, fontStyle: 'bold' },
+          bodyStyles: { fontSize: 8 },
+          columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 80 },
+            3: { halign: 'right' },
+            4: { halign: 'right' }
+          }
+        });
+        
+        console.log('Top products table added');
+      }
+      
+      // Save the PDF
+      const filename = `Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      console.log('PDF saved:', filename);
+      toast.success('Analytics PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Analytics PDF generation error:', error);
+      toast.error(`Failed to generate PDF: ${error.message}`);
     }
-    
-    // Save the PDF
-    doc.save(`Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success('Analytics PDF downloaded successfully!');
   };
 
   if (loading) {
