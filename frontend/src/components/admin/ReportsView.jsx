@@ -22,8 +22,11 @@ export default function ReportsView() {
   const formatNumber = (value) => new Intl.NumberFormat('en-IN').format(value);
 
   const generateSalesReport = async (doc) => {
+    console.log('Generating Sales Report...');
     const response = await superstoreAPI.getSalesAnalytics({});
+    console.log('Sales Analytics Response:', response);
     const data = response.data.data;
+    console.log('Sales Data:', data);
     
     doc.setFontSize(20);
     doc.text('Sales Report', 14, 20);
@@ -321,7 +324,8 @@ export default function ReportsView() {
       toast.success('Report generated and downloaded successfully!');
     } catch (error) {
       console.error('Error generating report:', error);
-      toast.error('Failed to generate report. Please try again.');
+      console.error('Error details:', error.response?.data || error.message);
+      toast.error(error.response?.data?.message || 'Failed to generate report. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -418,6 +422,7 @@ export default function ReportsView() {
                   setReportType(type.id);
                   setGenerating(true);
                   try {
+                    console.log(`Generating ${type.name}...`);
                     const doc = new jsPDF();
                     
                     switch(type.id) {
@@ -442,11 +447,13 @@ export default function ReportsView() {
                     }
                     
                     const fileName = `${type.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                    console.log(`Saving file: ${fileName}`);
                     doc.save(fileName);
                     toast.success(`${type.name} downloaded successfully!`);
                   } catch (error) {
-                    console.error('Error:', error);
-                    toast.error('Failed to generate report');
+                    console.error('Error generating report:', error);
+                    console.error('Error response:', error.response);
+                    toast.error(error.response?.data?.message || error.message || 'Failed to generate report');
                   } finally {
                     setGenerating(false);
                     setReportType(prevType);
