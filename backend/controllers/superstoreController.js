@@ -165,84 +165,106 @@ export const getOrders = async (req, res) => {
 // Get sales analytics
 export const getSalesAnalytics = async (req, res) => {
   try {
-    // Yearly comparison
-    const yearlyComparison = await SuperstoreOrder.aggregate([
+    const { category, region } = req.query;
+    
+    // Build match filter
+    const matchFilter = {};
+    if (category && category !== 'all') {
+      matchFilter.category = category;
+    }
+    if (region && region !== 'all') {
+      matchFilter.region = region;
+    }
+
+    // Total sales with filter
+    const totalStats = await SuperstoreOrder.aggregate([
+      ...(Object.keys(matchFilter).length > 0 ? [{ $match: matchFilter }] : []),
       {
         $group: {
-          _id: { $year: '$orderDate' },
+          _id: null,
+          totalSales: { $sum: '$sales' },
+          totalProfit: { $sum: '$profit' },
+          totalOrders: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Monthly sales trend
+    const monthlySales = await SuperstoreOrder.aggregate([
+      ...(Object.keys(matchFilter).length > 0 ? [{ $match: matchFilter }] : []),
+      {
+        $group: {
+          _id: {
+            year: { $year: '$orderDate' },
+            month: { $month: '$orderDate' }
+          },
           sales: { $sum: '$sales' },
           profit: { $sum: '$profit' },
           orders: { $sum: 1 }
         }
       },
-      { $sort: { _id: 1 } }
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
+      {
+        $project: {
+          month: {
+            $concat: [
+              { $toString: '$_id.year' },
+              '-',
+              {
+                $cond: [
+                  { $lt: ['$_id.month', 10] },
+                  { $concat: ['0', { $toString: '$_id.month' }] },
+                  { $toString: '$_id.month' }
+                ]
+              }
+            ]
+          },
+          sales: 1,
+          profit: 1,
+          orders: 1
+        }
+      }
     ]);
 
-    // Category performance
-    const categoryPerformance = await SuperstoreOrder.aggregate([
+    // Category breakdown
+    const categoryBreakdown = await SuperstoreOrder.aggregate([
+      ...(Object.keys(matchFilter).length > 0 ? [{ $match: matchFilter }] : []),
       {
         $group: {
-          _id: {
-            category: '$category',
-            subCategory: '$subCategory'
-          },
+          _id: '$category',
           sales: { $sum: '$sales' },
           profit: { $sum: '$profit' },
-          profitMargin: { 
-            $avg: { 
-              $multiply: [ 
-                { $divide: ['$profit', '$sales'] }, 
-                100 
-              ] 
-            } 
-          }
+          orders: { $sum: 1 }
         }
       },
       { $sort: { sales: -1 } }
     ]);
 
-    // Ship mode analysis
-    const shipModeAnalysis = await SuperstoreOrder.aggregate([
+    // Region breakdown
+    const regionBreakdown = await SuperstoreOrder.aggregate([
+      ...(Object.keys(matchFilter).length > 0 ? [{ $match: matchFilter }] : []),
       {
         $group: {
-          _id: '$shipMode',
-          orders: { $sum: 1 },
-          sales: { $sum: '$sales' },
-          avgShipDays: {
-            $avg: {
-              $divide: [
-                { $subtract: ['$shipDate', '$orderDate'] },
-                86400000 // milliseconds in a day
-              ]
-            }
-          }
-        }
-      },
-      { $sort: { orders: -1 } }
-    ]);
-
-    // State-wise performance
-    const statePerformance = await SuperstoreOrder.aggregate([
-      {
-        $group: {
-          _id: '$state',
-          region: { $first: '$region' },
+          _id: '$region',
           sales: { $sum: '$sales' },
           profit: { $sum: '$profit' },
           orders: { $sum: 1 }
         }
       },
-      { $sort: { sales: -1 } },
-      { $limit: 20 }
+      { $sort: { sales: -1 } }
     ]);
+
+    const stats = totalStats[0] || { totalSales: 0, totalProfit: 0, totalOrders: 0 };
 
     res.json({
       success: true,
       data: {
-        yearlyComparison,
-        categoryPerformance,
-        shipModeAnalysis,
-        statePerformance
+        totalSales: stats.totalSales,
+        totalProfit: stats.totalProfit,
+        totalOrders: stats.totalOrders,
+        monthlySales,
+        categoryBreakdown,
+        regionBreakdown
       }
     });
   } catch (error) {
@@ -367,57 +389,316 @@ export const getAvailableProducts = async (req, res) => {
 
 export const getProfitAnalysis = async (req, res) => {
   try {
-    // Most and least profitable products
-    const profitableProducts = await SuperstoreOrder.aggregate([
+    // Calculate overall profit metrics
+    const overallStats = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalProfit: { $sum: '$profit' },
+          totalSales: { $sum: '$sales' },
+          avgMargin: {
+            $avg: {
+              $cond: [
+                { $eq: ['$sales', 0] },
+                0,
+                { $divide: ['$profit', '$sales'] }
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    // Top profitable products
+    const topProfitable = await SuperstoreOrder.aggregate([
       {
         $group: {
           _id: '$productName',
           category: { $first: '$category' },
           totalProfit: { $sum: '$profit' },
           totalSales: { $sum: '$sales' },
+          orders: { $sum: 1 },
           profitMargin: {
             $avg: {
-              $multiply: [
-                { $divide: ['$profit', '$sales'] },
-                100
+              $cond: [
+                { $eq: ['$sales', 0] },
+                0,
+                { $divide: ['$profit', '$sales'] }
               ]
             }
           }
         }
       },
-      { $sort: { totalProfit: -1 } }
-    ]);
-
-    const mostProfitable = profitableProducts.slice(0, 10);
-    const leastProfitable = profitableProducts.slice(-10).reverse();
-
-    // Discount impact
-    const discountImpact = await SuperstoreOrder.aggregate([
+      { $sort: { totalProfit: -1 } },
+      { $limit: 10 },
       {
-        $bucket: {
-          groupBy: '$discount',
-          boundaries: [0, 0.1, 0.2, 0.3, 1],
-          default: 'No Discount',
-          output: {
-            orders: { $sum: 1 },
-            avgProfit: { $avg: '$profit' },
-            avgSales: { $avg: '$sales' },
-            totalSales: { $sum: '$sales' }
-          }
+        $project: {
+          productName: '$_id',
+          category: 1,
+          totalProfit: { $round: ['$totalProfit', 2] },
+          totalSales: { $round: ['$totalSales', 2] },
+          orders: 1,
+          profitMargin: { $round: [{ $multiply: ['$profitMargin', 100] }, 2] }
         }
       }
+    ]);
+
+    // Low margin products
+    const lowMargin = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: '$productName',
+          category: { $first: '$category' },
+          totalProfit: { $sum: '$profit' },
+          totalSales: { $sum: '$sales' },
+          orders: { $sum: 1 },
+          profitMargin: {
+            $avg: {
+              $cond: [
+                { $eq: ['$sales', 0] },
+                0,
+                { $divide: ['$profit', '$sales'] }
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { profitMargin: 1 } },
+      { $limit: 10 },
+      {
+        $project: {
+          productName: '$_id',
+          category: 1,
+          totalProfit: { $round: ['$totalProfit', 2] },
+          totalSales: { $round: ['$totalSales', 2] },
+          orders: 1,
+          profitMargin: { $round: [{ $multiply: ['$profitMargin', 100] }, 2] }
+        }
+      }
+    ]);
+
+    // Category profitability
+    const categoryProfit = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          profit: { $sum: '$profit' },
+          sales: { $sum: '$sales' },
+          orders: { $sum: 1 },
+          profitMargin: {
+            $avg: {
+              $cond: [
+                { $eq: ['$sales', 0] },
+                0,
+                { $divide: ['$profit', '$sales'] }
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { profit: -1 } },
+      {
+        $project: {
+          category: '$_id',
+          profit: { $round: ['$profit', 2] },
+          sales: { $round: ['$sales', 2] },
+          orders: 1,
+          profitMargin: { $round: [{ $multiply: ['$profitMargin', 100] }, 2] }
+        }
+      }
+    ]);
+
+    const stats = overallStats[0] || { totalProfit: 0, totalSales: 0, avgMargin: 0 };
+
+    res.json({
+      success: true,
+      data: {
+        totalProfit: Math.round(stats.totalProfit),
+        totalSales: Math.round(stats.totalSales),
+        avgMargin: stats.avgMargin,
+        topProfitable,
+        lowMargin,
+        categoryProfit
+      }
+    });
+  } catch (error) {
+    console.error('Profit analysis error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get product analytics for inventory view
+export const getProductAnalytics = async (req, res) => {
+  try {
+    // Total products and quantities
+    const productStats = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalProducts: { $addToSet: '$productName' },
+          totalQuantity: { $sum: '$quantity' },
+          totalValue: { $sum: '$sales' },
+          avgPrice: { $avg: { $divide: ['$sales', '$quantity'] } }
+        }
+      }
+    ]);
+
+    // Category breakdown
+    const categoryBreakdown = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          quantity: { $sum: '$quantity' },
+          value: { $sum: '$sales' },
+          products: { $addToSet: '$productName' }
+        }
+      },
+      {
+        $project: {
+          category: '$_id',
+          quantity: 1,
+          value: { $round: ['$value', 2] },
+          productCount: { $size: '$products' }
+        }
+      },
+      { $sort: { value: -1 } }
+    ]);
+
+    // Top products by quantity
+    const topProducts = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: '$productName',
+          category: { $first: '$category' },
+          subCategory: { $first: '$subCategory' },
+          quantity: { $sum: '$quantity' },
+          totalSales: { $sum: '$sales' },
+          totalProfit: { $sum: '$profit' },
+          orders: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          productName: '$_id',
+          category: 1,
+          subCategory: 1,
+          quantity: 1,
+          totalSales: { $round: ['$totalSales', 2] },
+          totalProfit: { $round: ['$totalProfit', 2] },
+          orders: 1
+        }
+      },
+      { $sort: { quantity: -1 } }
+    ]);
+
+    const stats = productStats[0] || {};
+    
+    res.json({
+      success: true,
+      data: {
+        totalProducts: stats.totalProducts?.length || 0,
+        totalQuantity: stats.totalQuantity || 0,
+        totalValue: Math.round(stats.totalValue || 0),
+        avgPrice: Math.round((stats.avgPrice || 0) * 100) / 100,
+        categoryBreakdown,
+        topProducts
+      }
+    });
+  } catch (error) {
+    console.error('Product analytics error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get customer analytics
+export const getCustomerAnalytics = async (req, res) => {
+  try {
+    // Total unique customers
+    const totalCustomers = await SuperstoreOrder.distinct('customerId').then(ids => ids.length);
+
+    // Customer segmentation by segment
+    const segmentDistribution = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: '$segment',
+          customers: { $addToSet: '$customerId' },
+          sales: { $sum: '$sales' },
+          orders: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          segment: '$_id',
+          customerCount: { $size: '$customers' },
+          sales: { $round: ['$sales', 2] },
+          orders: 1,
+          avgOrderValue: { $round: [{ $divide: ['$sales', '$orders'] }, 2] }
+        }
+      },
+      { $sort: { sales: -1 } }
+    ]);
+
+    // Top customers by sales
+    const topCustomers = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: '$customerId',
+          customerName: { $first: '$customerName' },
+          segment: { $first: '$segment' },
+          region: { $first: '$region' },
+          totalSales: { $sum: '$sales' },
+          totalProfit: { $sum: '$profit' },
+          orders: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          customerId: '$_id',
+          customerName: 1,
+          segment: 1,
+          region: 1,
+          totalSales: { $round: ['$totalSales', 2] },
+          totalProfit: { $round: ['$totalProfit', 2] },
+          orders: 1,
+          avgOrderValue: { $round: [{ $divide: ['$totalSales', '$orders'] }, 2] }
+        }
+      },
+      { $sort: { totalSales: -1 } },
+      { $limit: 20 }
+    ]);
+
+    // Regional customer distribution
+    const regionalDistribution = await SuperstoreOrder.aggregate([
+      {
+        $group: {
+          _id: '$region',
+          customers: { $addToSet: '$customerId' },
+          sales: { $sum: '$sales' },
+          orders: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          region: '$_id',
+          customerCount: { $size: '$customers' },
+          sales: { $round: ['$sales', 2] },
+          orders: 1
+        }
+      },
+      { $sort: { sales: -1 } }
     ]);
 
     res.json({
       success: true,
       data: {
-        mostProfitable,
-        leastProfitable,
-        discountImpact
+        totalCustomers,
+        segmentDistribution,
+        topCustomers,
+        regionalDistribution
       }
     });
   } catch (error) {
-    console.error('Profit analysis error:', error);
+    console.error('Customer analytics error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

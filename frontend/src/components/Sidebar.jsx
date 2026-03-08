@@ -19,7 +19,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -44,18 +44,18 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile menu button */}
+      {/* Menu toggle button - visible on all screens */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg"
+        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg hover:bg-gray-50 transition-colors"
       >
-        {collapsed ? <X size={24} /> : <Menu size={24} />}
+        {collapsed ? <Menu size={24} /> : <X size={24} />}
       </button>
 
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-40 ${
-          collapsed ? '-translate-x-full lg:translate-x-0 lg:w-20' : 'w-64'
+          collapsed ? '-translate-x-full' : 'w-64'
         }`}
       >
         <div className="flex flex-col h-full">
@@ -119,10 +119,10 @@ const Sidebar = () => {
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* Overlay for when sidebar is open */}
       {!collapsed && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setCollapsed(true)}
         />
       )}

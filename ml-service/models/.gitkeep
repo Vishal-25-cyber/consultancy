@@ -1,0 +1,8 @@
+# Models Directory
+
+This directory stores trained Random Forest models:
+- `sales_predictor.pkl`
+- `demand_predictor.pkl`
+- `customer_segmentation.pkl`
+
+Models are created by running `python train.py`

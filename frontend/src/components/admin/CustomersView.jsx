@@ -28,8 +28,22 @@ export default function CustomersView() {
     }
   };
 
-  const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-  const formatNumber = (value) => new Intl.NumberFormat('en-US').format(value);
+  const formatCurrency = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+  const formatNumber = (value) => new Intl.NumberFormat('en-IN').format(value);
+
+  // Format Y-axis values for better readability
+  const formatYAxis = (value) => {
+    if (value >= 10000000) { // 1 Crore = 10 Million
+      return `₹${(value / 10000000).toFixed(1)}Cr`;
+    }
+    if (value >= 100000) { // 1 Lakh
+      return `₹${(value / 100000).toFixed(1)}L`;
+    }
+    if (value >= 1000) {
+      return `₹${(value / 1000).toFixed(0)}K`;
+    }
+    return `₹${value}`;
+  };
 
   if (loading) {
     return (
@@ -106,13 +120,24 @@ export default function CustomersView() {
                 cy="50%"
                 outerRadius={100}
                 label={(entry) => `${entry._id}: ${entry.customers}`}
+                style={{ fontSize: '12px', fontWeight: '600' }}
               >
                 {segmentData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Legend />
+              <Tooltip 
+                formatter={(value) => formatCurrency(value)}
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: '13px', fontWeight: '600' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -121,11 +146,31 @@ export default function CustomersView() {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-200">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Revenue by Segment</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={segmentData}>
+            <BarChart data={segmentData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="_id" stroke="#64748b" />
-              <YAxis stroke="#64748b" />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <XAxis 
+                dataKey="_id" 
+                stroke="#64748b"
+                style={{ fontSize: '13px', fontWeight: '500' }}
+              />
+              <YAxis 
+                stroke="#64748b"
+                tickFormatter={formatYAxis}
+                style={{ fontSize: '13px', fontWeight: '600' }}
+                width={80}
+              />
+              <Tooltip 
+                formatter={(value) => formatCurrency(value)}
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: '14px', fontWeight: '600' }} />
               <Bar dataKey="sales" fill="#3B82F6" radius={[8, 8, 0, 0]} name="Sales" />
             </BarChart>
           </ResponsiveContainer>

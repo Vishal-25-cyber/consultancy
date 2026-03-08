@@ -62,8 +62,10 @@ export const superstoreAPI = {
   getOrders: (params) => apiClient.get('/superstore/orders', { params }),
   createOrder: (orderData) => apiClient.post('/superstore/orders', orderData),
   getAvailableProducts: () => apiClient.get('/superstore/products'),
-  getSalesAnalytics: () => apiClient.get('/superstore/sales-analytics'),
+  getSalesAnalytics: (params) => apiClient.get('/superstore/sales-analytics', { params }),
   getProfitAnalysis: () => apiClient.get('/superstore/profit-analysis'),
+  getProductAnalytics: () => apiClient.get('/superstore/product-analytics'),
+  getCustomerAnalytics: () => apiClient.get('/superstore/customer-analytics'),
 };
 
 export default apiClient;

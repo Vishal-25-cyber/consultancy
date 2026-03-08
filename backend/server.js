@@ -17,6 +17,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import mlRoutes from './routes/mlRoutes.js';
 
 // Load env vars
 dotenv.config();
@@ -45,6 +46,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/ml', mlRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

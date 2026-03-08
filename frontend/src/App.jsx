@@ -16,6 +16,7 @@ import Vehicles from './pages/Vehicles';
 import Analytics from './pages/Analytics';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import MLPredictions from './pages/MLPredictions';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="/vehicles" element={<PrivateRoute><Vehicles /></PrivateRoute>} />
           <Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
           <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
+          <Route path="/ml-predictions" element={<PrivateRoute><MLPredictions /></PrivateRoute>} />
           <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
           
           {/* Catch all */}

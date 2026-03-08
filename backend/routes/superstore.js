@@ -5,7 +5,9 @@ import {
   getSalesAnalytics, 
   getProfitAnalysis,
   createOrder,
-  getAvailableProducts
+  getAvailableProducts,
+  getProductAnalytics,
+  getCustomerAnalytics
 } from '../controllers/superstoreController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -27,5 +29,7 @@ router.get('/products', getAvailableProducts);
 // Analytics
 router.get('/sales-analytics', getSalesAnalytics);
 router.get('/profit-analysis', getProfitAnalysis);
+router.get('/product-analytics', getProductAnalytics);
+router.get('/customer-analytics', getCustomerAnalytics);
 
 export default router;

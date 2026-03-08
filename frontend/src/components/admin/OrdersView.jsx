@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { superstoreAPI } from '../../utils/superstoreApi';
 import { Search, Filter, Calendar, MapPin, DollarSign, Package, X, Download, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function OrdersView() {
   const [loading, setLoading] = useState(false);
@@ -89,6 +91,84 @@ export default function OrdersView() {
     });
   };
 
+  const downloadPDF = () => {
+    const doc = new jsPDF('landscape');
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Orders Report', 14, 20);
+    
+    // Add date and filters
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
+    
+    let filterY = 34;
+    if (filters.category) {
+      doc.text(`Category: ${filters.category}`, 14, filterY);
+      filterY += 6;
+    }
+    if (filters.region) {
+      doc.text(`Region: ${filters.region}`, 14, filterY);
+      filterY += 6;
+    }
+    if (filters.segment) {
+      doc.text(`Segment: ${filters.segment}`, 14, filterY);
+      filterY += 6;
+    }
+    if (filters.shipMode) {
+      doc.text(`Ship Mode: ${filters.shipMode}`, 14, filterY);
+      filterY += 6;
+    }
+    
+    // Add summary
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+    doc.text(`Total Orders: ${pagination.total.toLocaleString()}`, 14, filterY + 6);
+    doc.text(`Page ${pagination.page} of ${pagination.totalPages}`, 14, filterY + 12);
+    
+    // Add orders table
+    const tableData = orders.map((order) => [
+      order.orderId,
+      formatDate(order.orderDate),
+      order.customerName,
+      order.productName.length > 30 ? order.productName.substring(0, 30) + '...' : order.productName,
+      order.category,
+      `${order.city}, ${order.state}`,
+      order.region,
+      formatCurrency(order.sales),
+      formatCurrency(order.profit),
+      order.shipMode
+    ]);
+    
+    doc.autoTable({
+      startY: filterY + 18,
+      head: [['Order ID', 'Date', 'Customer', 'Product', 'Category', 'Location', 'Region', 'Sales', 'Profit', 'Ship Mode']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 30 },
+        6: { cellWidth: 18 },
+        7: { cellWidth: 22, halign: 'right' },
+        8: { cellWidth: 22, halign: 'right' },
+        9: { cellWidth: 25 }
+      },
+      margin: { left: 14, right: 14 }
+    });
+    
+    // Save the PDF
+    doc.save(`Orders_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success('Orders PDF downloaded successfully!');
+  };
+
   const hasActiveFilters = Object.values(filters).some(v => v !== '');
 
   return (
@@ -96,14 +176,24 @@ export default function OrdersView() {
       {/* Header with Refresh Button */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">Orders Management</h2>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={downloadPDF}
+            disabled={orders.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={18} />
+            Download PDF
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Header 

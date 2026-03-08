@@ -6,6 +6,7 @@ import AnalyticsView from '../components/admin/AnalyticsView';
 import InventoryView from '../components/admin/InventoryView';
 import ReportsView from '../components/admin/ReportsView';
 import CustomersView from '../components/admin/CustomersView';
+import MLPredictions from './MLPredictions';
 
 export default function SuperstoreAdmin() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -20,6 +21,8 @@ export default function SuperstoreAdmin() {
         return <AnalyticsView />;
       case 'inventory':
         return <InventoryView />;
+      case 'ml-predictions':
+        return <MLPredictions />;
       case 'reports':
         return <ReportsView />;
       case 'customers':

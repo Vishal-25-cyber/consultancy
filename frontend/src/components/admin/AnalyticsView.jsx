@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { superstoreAPI } from '../../utils/superstoreApi';
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Filter, Calendar, Percent } from 'lucide-react';
+import { TrendingUp, TrendingDown, Filter, Calendar, Percent, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function AnalyticsView() {
   const [loading, setLoading] = useState(true);
@@ -40,12 +42,140 @@ export default function AnalyticsView() {
   };
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
+  };
+
+  // Format Y-axis values for better readability
+  const formatYAxis = (value) => {
+    if (value >= 10000000) { // 1 Crore = 10 Million
+      return `₹${(value / 10000000).toFixed(1)}Cr`;
+    }
+    if (value >= 100000) { // 1 Lakh
+      return `₹${(value / 100000).toFixed(1)}L`;
+    }
+    if (value >= 1000) {
+      return `₹${(value / 1000).toFixed(0)}K`;
+    }
+    return `₹${value}`;
+  };
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Analytics Report', 14, 20);
+    
+    // Add date and filters
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
+    doc.text(`Category: ${selectedCategory === 'all' ? 'All Categories' : selectedCategory}`, 14, 34);
+    doc.text(`Region: ${selectedRegion === 'all' ? 'All Regions' : selectedRegion}`, 14, 40);
+    
+    // Add Key Metrics
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Key Metrics', 14, 52);
+    
+    doc.setFontSize(10);
+    doc.text(`Total Sales: ${formatCurrency(analyticsData.sales?.totalSales || 0)}`, 14, 60);
+    doc.text(`Profit Margin: ${((analyticsData.profit?.avgMargin || 0) * 100).toFixed(1)}%`, 14, 66);
+    doc.text(`Products Sold: ${(analyticsData.products?.totalProducts || 0).toLocaleString()}`, 14, 72);
+    doc.text(`Active Customers: ${(analyticsData.customers?.totalCustomers || 0).toLocaleString()}`, 14, 78);
+    
+    // Add Category Performance
+    doc.setFontSize(14);
+    doc.text('Category Performance', 14, 90);
+    
+    const categoryData = categoryStats.map((cat) => [
+      cat._id,
+      formatCurrency(cat.sales),
+      formatCurrency(cat.profit),
+      `${((cat.profit / cat.sales) * 100).toFixed(1)}%`
+    ]);
+    
+    doc.autoTable({
+      startY: 94,
+      head: [['Category', 'Sales', 'Profit', 'Margin']],
+      body: categoryData,
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 10, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+        3: { halign: 'right' }
+      }
+    });
+    
+    // Add Regional Performance
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(14);
+    doc.text('Regional Performance', 14, finalY);
+    
+    const regionData = regionStats.map((region) => [
+      region._id,
+      formatCurrency(region.sales),
+      formatCurrency(region.profit),
+      region.orders.toLocaleString(),
+      `${((region.profit / region.sales) * 100).toFixed(1)}%`
+    ]);
+    
+    doc.autoTable({
+      startY: finalY + 4,
+      head: [['Region', 'Sales', 'Profit', 'Orders', 'Margin']],
+      body: regionData,
+      theme: 'striped',
+      headStyles: { fillColor: [34, 197, 94], textColor: 255, fontSize: 10, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+        3: { halign: 'right' },
+        4: { halign: 'right' }
+      }
+    });
+    
+    // Add Top Products on new page if needed
+    if (profitableProducts.length > 0) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Top 10 Most Profitable Products', 14, 20);
+      
+      const profitableData = profitableProducts.map((product, idx) => [
+        idx + 1,
+        product.productName,
+        product.category,
+        formatCurrency(product.totalProfit),
+        `${product.profitMargin}%`
+      ]);
+      
+      doc.autoTable({
+        startY: 24,
+        head: [['#', 'Product', 'Category', 'Profit', 'Margin']],
+        body: profitableData,
+        theme: 'striped',
+        headStyles: { fillColor: [16, 185, 129], textColor: 255, fontSize: 10, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 10 },
+          1: { cellWidth: 80 },
+          3: { halign: 'right' },
+          4: { halign: 'right' }
+        }
+      });
+    }
+    
+    // Save the PDF
+    doc.save(`Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success('Analytics PDF downloaded successfully!');
   };
 
   if (loading) {
@@ -60,16 +190,27 @@ export default function AnalyticsView() {
   }
 
   const monthlySales = analyticsData.sales?.monthlySales || [];
-  const profitableProducts = analyticsData.profit?.topProfitable?.slice(0, 10) || [];
-  const lowMarginProducts = analyticsData.profit?.lowMargin?.slice(0, 10) || [];
+  const profitableProducts = analyticsData.profit?.topProfitable || [];
+  const lowMarginProducts = analyticsData.profit?.lowMargin || [];
+  const categoryStats = analyticsData.sales?.categoryBreakdown || [];
+  const regionStats = analyticsData.sales?.regionBreakdown || [];
 
   return (
     <div className="space-y-6">
       {/* Analytics Filter Controls */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-200">
-        <div className="flex items-center space-x-2 mb-4">
-          <Filter size={20} className="text-slate-600" />
-          <h3 className="text-lg font-bold text-slate-900">Analytics Filters</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <Filter size={20} className="text-slate-600" />
+            <h3 className="text-lg font-bold text-slate-900">Analytics Filters</h3>
+          </div>
+          <button
+            onClick={downloadPDF}
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg hover:shadow-xl"
+          >
+            <Download size={18} />
+            Download PDF
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -181,12 +322,12 @@ export default function AnalyticsView() {
             {profitableProducts.map((product, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900 truncate">{product._id}</p>
+                  <p className="text-sm font-medium text-slate-900 truncate">{product.productName}</p>
                   <p className="text-xs text-slate-500">{product.category}</p>
                 </div>
                 <div className="text-right ml-4">
                   <p className="text-sm font-bold text-green-600">{formatCurrency(product.totalProfit)}</p>
-                  <p className="text-xs text-slate-500">{((product.totalProfit / product.totalSales) * 100).toFixed(1)}% margin</p>
+                  <p className="text-xs text-slate-500">{product.profitMargin}% margin</p>
                 </div>
               </div>
             ))}
@@ -203,12 +344,12 @@ export default function AnalyticsView() {
             {lowMarginProducts.map((product, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900 truncate">{product._id}</p>
+                  <p className="text-sm font-medium text-slate-900 truncate">{product.productName}</p>
                   <p className="text-xs text-slate-500">{product.category}</p>
                 </div>
                 <div className="text-right ml-4">
                   <p className="text-sm font-bold text-red-600">{formatCurrency(product.totalProfit)}</p>
-                  <p className="text-xs text-slate-500">{((product.totalProfit / product.totalSales) * 100).toFixed(1)}% margin</p>
+                  <p className="text-xs text-slate-500">{product.profitMargin}% margin</p>
                 </div>
               </div>
             ))}
@@ -220,12 +361,31 @@ export default function AnalyticsView() {
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-200">
         <h2 className="text-xl font-bold text-slate-900 mb-6">Category Performance Comparison</h2>
         <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={analyticsData.sales?.categoryStats || []}>
+          <BarChart data={categoryStats} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="_id" stroke="#64748b" />
-            <YAxis stroke="#64748b" />
-            <Tooltip formatter={(value) => formatCurrency(value)} />
-            <Legend />
+            <XAxis 
+              dataKey="_id" 
+              stroke="#64748b"
+              style={{ fontSize: '13px', fontWeight: '500' }}
+            />
+            <YAxis 
+              stroke="#64748b"
+              tickFormatter={formatYAxis}
+              style={{ fontSize: '13px', fontWeight: '600' }}
+              width={80}
+            />
+            <Tooltip 
+              formatter={(value) => formatCurrency(value)}
+              contentStyle={{ 
+                backgroundColor: '#fff', 
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            />
+            <Legend wrapperStyle={{ fontSize: '14px', fontWeight: '600' }} />
             <Bar dataKey="sales" fill="#3B82F6" radius={[8, 8, 0, 0]} name="Sales" />
             <Bar dataKey="profit" fill="#10B981" radius={[8, 8, 0, 0]} name="Profit" />
           </BarChart>
@@ -236,7 +396,7 @@ export default function AnalyticsView() {
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-200">
         <h2 className="text-xl font-bold text-slate-900 mb-6">Regional Performance Analysis</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {(analyticsData.sales?.regionStats || []).map((region, index) => (
+          {regionStats.map((region, index) => (
             <div key={index} className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-5 border-2 border-slate-200">
               <h4 className="text-lg font-bold text-slate-900 mb-3">{region._id} Region</h4>
               <div className="space-y-2">

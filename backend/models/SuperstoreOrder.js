@@ -17,7 +17,7 @@ const superstoreOrderSchema = new mongoose.Schema({
   },
   shipMode: {
     type: String,
-    enum: ['Standard Class', 'Second Class', 'First Class', 'Same Day'],
+    enum: ['Standard Delivery', 'Express Delivery', 'Same Day', 'Economy', 'Standard Class', 'Second Class', 'First Class'],
     required: true
   },
   customerId: {
@@ -30,12 +30,12 @@ const superstoreOrderSchema = new mongoose.Schema({
   },
   segment: {
     type: String,
-    enum: ['Consumer', 'Corporate', 'Home Office'],
+    enum: ['Wholesale', 'Retail', 'Industrial', 'Corporate', 'Consumer', 'Home Office'],
     required: true
   },
   country: {
     type: String,
-    default: 'United States'
+    default: 'India'
   },
   city: {
     type: String,
@@ -51,7 +51,7 @@ const superstoreOrderSchema = new mongoose.Schema({
   },
   region: {
     type: String,
-    enum: ['East', 'West', 'Central', 'South'],
+    enum: ['North India', 'South India', 'East India', 'West India', 'Central India', 'East', 'West', 'Central', 'South'],
     required: true
   },
   productId: {
@@ -60,7 +60,7 @@ const superstoreOrderSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Furniture', 'Office Supplies', 'Technology'],
+    enum: ['Packaging Materials', 'Plastic Products', 'Textile Products', 'Accessories', 'Furniture', 'Office Supplies', 'Technology'],
     required: true
   },
   subCategory: {
