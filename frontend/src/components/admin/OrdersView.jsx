@@ -3,7 +3,7 @@ import { superstoreAPI } from '../../utils/superstoreApi';
 import { Search, Filter, Calendar, MapPin, DollarSign, Package, X, Download, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function OrdersView() {
   const [loading, setLoading] = useState(false);
@@ -92,81 +92,102 @@ export default function OrdersView() {
   };
 
   const downloadPDF = () => {
-    const doc = new jsPDF('landscape');
-    
-    // Add title
-    doc.setFontSize(20);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Orders Report', 14, 20);
-    
-    // Add date and filters
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
-    
-    let filterY = 34;
-    if (filters.category) {
-      doc.text(`Category: ${filters.category}`, 14, filterY);
-      filterY += 6;
+    try {
+      console.log('Starting PDF generation...');
+      console.log('Orders count:', orders.length);
+      
+      if (orders.length === 0) {
+        toast.error('No orders to download');
+        return;
+      }
+
+      const doc = new jsPDF('landscape');
+      console.log('jsPDF instance created');
+      console.log('autoTable available:', typeof doc.autoTable);
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Orders Report', 14, 20);
+      
+      // Add date and filters
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
+      
+      let filterY = 34;
+      if (filters.category) {
+        doc.text(`Category: ${filters.category}`, 14, filterY);
+        filterY += 6;
+      }
+      if (filters.region) {
+        doc.text(`Region: ${filters.region}`, 14, filterY);
+        filterY += 6;
+      }
+      if (filters.segment) {
+        doc.text(`Segment: ${filters.segment}`, 14, filterY);
+        filterY += 6;
+      }
+      if (filters.shipMode) {
+        doc.text(`Ship Mode: ${filters.shipMode}`, 14, filterY);
+        filterY += 6;
+      }
+      
+      // Add summary
+      doc.setFontSize(12);
+      doc.setTextColor(40, 40, 40);
+      doc.text(`Total Orders: ${pagination.total.toLocaleString()}`, 14, filterY + 6);
+      doc.text(`Page ${pagination.page} of ${pagination.totalPages}`, 14, filterY + 12);
+      
+      // Add orders table
+      const tableData = orders.map((order) => [
+        order.orderId,
+        formatDate(order.orderDate),
+        order.customerName,
+        order.productName.length > 30 ? order.productName.substring(0, 30) + '...' : order.productName,
+        order.category,
+        `${order.city}, ${order.state}`,
+        order.region,
+        formatCurrency(order.sales),
+        formatCurrency(order.profit),
+        order.shipMode
+      ]);
+      
+      console.log('Table data prepared, rows:', tableData.length);
+      
+      doc.autoTable({
+        startY: filterY + 18,
+        head: [['Order ID', 'Date', 'Customer', 'Product', 'Category', 'Location', 'Region', 'Sales', 'Profit', 'Ship Mode']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7 },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 40 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 30 },
+          6: { cellWidth: 18 },
+          7: { cellWidth: 22, halign: 'right' },
+          8: { cellWidth: 22, halign: 'right' },
+          9: { cellWidth: 25 }
+        },
+        margin: { left: 14, right: 14 }
+      });
+      
+      console.log('Table added to PDF');
+      
+      // Save the PDF
+      const filename = `Orders_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      console.log('PDF saved:', filename);
+      toast.success('Orders PDF downloaded successfully!');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error(`Failed to generate PDF: ${error.message}`);
     }
-    if (filters.region) {
-      doc.text(`Region: ${filters.region}`, 14, filterY);
-      filterY += 6;
-    }
-    if (filters.segment) {
-      doc.text(`Segment: ${filters.segment}`, 14, filterY);
-      filterY += 6;
-    }
-    if (filters.shipMode) {
-      doc.text(`Ship Mode: ${filters.shipMode}`, 14, filterY);
-      filterY += 6;
-    }
-    
-    // Add summary
-    doc.setFontSize(12);
-    doc.setTextColor(40, 40, 40);
-    doc.text(`Total Orders: ${pagination.total.toLocaleString()}`, 14, filterY + 6);
-    doc.text(`Page ${pagination.page} of ${pagination.totalPages}`, 14, filterY + 12);
-    
-    // Add orders table
-    const tableData = orders.map((order) => [
-      order.orderId,
-      formatDate(order.orderDate),
-      order.customerName,
-      order.productName.length > 30 ? order.productName.substring(0, 30) + '...' : order.productName,
-      order.category,
-      `${order.city}, ${order.state}`,
-      order.region,
-      formatCurrency(order.sales),
-      formatCurrency(order.profit),
-      order.shipMode
-    ]);
-    
-    doc.autoTable({
-      startY: filterY + 18,
-      head: [['Order ID', 'Date', 'Customer', 'Product', 'Category', 'Location', 'Region', 'Sales', 'Profit', 'Ship Mode']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 8, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 7 },
-      columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 22 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 40 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 30 },
-        6: { cellWidth: 18 },
-        7: { cellWidth: 22, halign: 'right' },
-        8: { cellWidth: 22, halign: 'right' },
-        9: { cellWidth: 25 }
-      },
-      margin: { left: 14, right: 14 }
-    });
-    
-    // Save the PDF
-    doc.save(`Orders_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success('Orders PDF downloaded successfully!');
   };
 
   const hasActiveFilters = Object.values(filters).some(v => v !== '');
