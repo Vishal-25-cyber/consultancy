@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { FileText, Download, Calendar, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { superstoreAPI } from '../../utils/superstoreApi';
 
 export default function ReportsView() {
