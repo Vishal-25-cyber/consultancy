@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { FileText, Download, Calendar, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { superstoreAPI } from '../../utils/superstoreApi';
 
 export default function ReportsView() {
@@ -10,318 +9,304 @@ export default function ReportsView() {
   const [dateRange, setDateRange] = useState('monthly');
   const [generating, setGenerating] = useState(false);
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatNumber = (value) => new Intl.NumberFormat('en-IN').format(value);
-
-  const generateSalesReport = async (doc) => {
-    console.log('Generating Sales Report...');
+  const generateSalesReport = async () => {
     const response = await superstoreAPI.getSalesAnalytics({});
-    console.log('Sales Analytics Response:', response);
     const data = response.data.data;
-    console.log('Sales Data:', data);
     
-    doc.setFontSize(20);
-    doc.text('Sales Report', 14, 20);
+    const wb = XLSX.utils.book_new();
     
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
-    doc.text(`Date Range: ${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}`, 14, 34);
+    // Summary Sheet
+    const summaryData = [
+      ['Sales Report'],
+      ['Generated:', new Date().toLocaleDateString('en-IN')],
+      ['Date Range:', dateRange.charAt(0).toUpperCase() + dateRange.slice(1)],
+      [],
+      ['Summary'],
+      ['Total Sales', data.totalSales || 0],
+      ['Total Profit', data.totalProfit || 0],
+      ['Total Orders', data.totalOrders || 0],
+      ['Profit Margin', `${((data.totalProfit / data.totalSales) * 100).toFixed(2)}%`],
+      [],
+      ['Category Performance'],
+      ['Category', 'Sales', 'Profit', 'Orders', 'Margin %']
+    ];
     
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Summary', 14, 46);
-    
-    doc.setFontSize(10);
-    doc.text(`Total Sales: ${formatCurrency(data.totalSales || 0)}`, 14, 54);
-    doc.text(`Total Profit: ${formatCurrency(data.totalProfit || 0)}`, 14, 60);
-    doc.text(`Profit Margin: ${((data.totalProfit / data.totalSales) * 100).toFixed(2)}%`, 14, 66);
-    
-    // Category breakdown
-    if (data.categoryBreakdown && data.categoryBreakdown.length > 0) {
-      doc.setFontSize(14);
-      doc.text('Category Performance', 14, 78);
-      
-      const categoryData = data.categoryBreakdown.map(cat => [
-        cat._id,
-        formatCurrency(cat.sales),
-        formatCurrency(cat.profit),
-        `${((cat.profit / cat.sales) * 100).toFixed(1)}%`
-      ]);
-      
-      doc.autoTable({
-        startY: 82,
-        head: [['Category', 'Sales', 'Profit', 'Margin']],
-        body: categoryData,
-        theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246] }
+    if (data.categoryBreakdown) {
+      data.categoryBreakdown.forEach(cat => {
+        summaryData.push([
+          cat._id,
+          cat.sales,
+          cat.profit,
+          cat.orders,
+          ((cat.profit / cat.sales) * 100).toFixed(2)
+        ]);
       });
     }
     
-    // Regional breakdown
-    if (data.regionBreakdown && data.regionBreakdown.length > 0) {
-      const finalY = doc.lastAutoTable.finalY + 10;
-      doc.setFontSize(14);
-      doc.text('Regional Performance', 14, finalY);
-      
-      const regionData = data.regionBreakdown.map(region => [
-        region._id,
-        formatCurrency(region.sales),
-        formatCurrency(region.profit),
-        region.orders.toLocaleString()
-      ]);
-      
-      doc.autoTable({
-        startY: finalY + 4,
-        head: [['Region', 'Sales', 'Profit', 'Orders']],
-        body: regionData,
-        theme: 'striped',
-        headStyles: { fillColor: [34, 197, 94] }
+    summaryData.push([], ['Regional Performance'], ['Region', 'Sales', 'Profit', 'Orders', 'Margin %']);
+    
+    if (data.regionBreakdown) {
+      data.regionBreakdown.forEach(region => {
+        summaryData.push([
+          region._id,
+          region.sales,
+          region.profit,
+          region.orders,
+          ((region.profit / region.sales) * 100).toFixed(2)
+        ]);
       });
     }
+    
+    const ws = XLSX.utils.aoa_to_sheet(summaryData);
+    ws['!cols'] = [{wch: 20}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+    
+    // Monthly Trend Sheet
+    if (data.monthlySales && data.monthlySales.length > 0) {
+      const monthlyData = [
+        ['Monthly Sales Trend'],
+        ['Month', 'Sales', 'Profit'],
+        ...data.monthlySales.map(m => [m.month, m.sales, m.profit])
+      ];
+      const wsMonthly = XLSX.utils.aoa_to_sheet(monthlyData);
+      wsMonthly['!cols'] = [{wch: 15}, {wch: 15}, {wch: 15}];
+      XLSX.utils.book_append_sheet(wb, wsMonthly, 'Monthly Trend');
+    }
+    
+    return wb;
   };
 
-  const generateProfitReport = async (doc) => {
+  const generateProfitReport = async () => {
     const response = await superstoreAPI.getProfitAnalysis();
     const data = response.data.data;
     
-    doc.setFontSize(20);
-    doc.text('Profit Analysis Report', 14, 20);
+    const wb = XLSX.utils.book_new();
     
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
+    // Top Profitable Products
+    const profitableData = [
+      ['Profit Analysis Report'],
+      ['Generated:', new Date().toLocaleDateString('en-IN')],
+      [],
+      ['Top 10 Most Profitable Products'],
+      ['#', 'Product Name', 'Category', 'Total Profit', 'Profit Margin %'],
+      ...data.topProfitable.slice(0, 10).map((p, idx) => [
+        idx + 1,
+        p.productName,
+        p.category,
+        p.totalProfit,
+        p.profitMargin
+      ])
+    ];
     
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Top 10 Most Profitable Products', 14, 40);
+    const ws1 = XLSX.utils.aoa_to_sheet(profitableData);
+    ws1['!cols'] = [{wch: 5}, {wch: 40}, {wch: 20}, {wch: 15}, {wch: 15}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Top Profitable');
     
-    const profitableData = data.topProfitable.slice(0, 10).map((p, idx) => [
-      idx + 1,
-      p.productName,
-      p.category,
-      formatCurrency(p.totalProfit),
-      `${p.profitMargin}%`
-    ]);
+    // Low Margin Products
+    const lowMarginData = [
+      ['Low Margin Products'],
+      ['#', 'Product Name', 'Category', 'Total Profit', 'Profit Margin %'],
+      ...data.lowMargin.slice(0, 10).map((p, idx) => [
+        idx + 1,
+        p.productName,
+        p.category,
+        p.totalProfit,
+        p.profitMargin
+      ])
+    ];
     
-    doc.autoTable({
-      startY: 44,
-      head: [['#', 'Product', 'Category', 'Profit', 'Margin']],
-      body: profitableData,
-      theme: 'striped',
-      headStyles: { fillColor: [16, 185, 129] }
-    });
+    const ws2 = XLSX.utils.aoa_to_sheet(lowMarginData);
+    ws2['!cols'] = [{wch: 5}, {wch: 40}, {wch: 20}, {wch: 15}, {wch: 15}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Low Margin');
     
-    const finalY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(14);
-    doc.text('Low Margin Products', 14, finalY);
-    
-    const lowMarginData = data.lowMargin.slice(0, 10).map((p, idx) => [
-      idx + 1,
-      p.productName,
-      p.category,
-      formatCurrency(p.totalProfit),
-      `${p.profitMargin}%`
-    ]);
-    
-    doc.autoTable({
-      startY: finalY + 4,
-      head: [['#', 'Product', 'Category', 'Profit', 'Margin']],
-      body: lowMarginData,
-      theme: 'striped',
-      headStyles: { fillColor: [239, 68, 68] }
-    });
+    return wb;
   };
 
-  const generateInventoryReport = async (doc) => {
+  const generateInventoryReport = async () => {
     const response = await superstoreAPI.getProductAnalytics();
     const data = response.data.data;
     
-    doc.setFontSize(20);
-    doc.text('Inventory Report', 14, 20);
+    const wb = XLSX.utils.book_new();
     
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
+    const inventoryData = [
+      ['Inventory Report'],
+      ['Generated:', new Date().toLocaleDateString('en-IN')],
+      [],
+      ['Summary'],
+      ['Total Unique Products', data.totalProducts || 0],
+      ['Total Quantity', data.totalQuantity || 0],
+      ['Total Value', data.totalValue || 0],
+      ['Average Price', data.avgPrice || 0],
+      [],
+      ['All Products'],
+      ['#', 'Product Name', 'Category', 'Quantity Sold', 'Total Sales', 'Total Profit'],
+      ...data.topProducts.map((p, idx) => [
+        idx + 1,
+        p.productName,
+        p.category,
+        p.quantity,
+        p.totalSales || 0,
+        p.totalProfit || 0
+      ])
+    ];
     
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Summary', 14, 40);
+    const ws = XLSX.utils.aoa_to_sheet(inventoryData);
+    ws['!cols'] = [{wch: 5}, {wch: 40}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 15}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
     
-    doc.setFontSize(10);
-    doc.text(`Total Unique Products: ${formatNumber(data.totalProducts)}`, 14, 48);
-    doc.text(`Total Quantity: ${formatNumber(data.totalQuantity)}`, 14, 54);
-    doc.text(`Total Value: ${formatCurrency(data.totalValue)}`, 14, 60);
-    doc.text(`Average Price: ${formatCurrency(data.avgPrice)}`, 14, 66);
+    // Category Breakdown
+    if (data.categoryBreakdown && data.categoryBreakdown.length > 0) {
+      const categoryData = [
+        ['Category Breakdown'],
+        ['Category', 'Quantity', 'Value'],
+        ...data.categoryBreakdown.map(cat => [
+          cat.category,
+          cat.quantity,
+          cat.value
+        ])
+      ];
+      const wsCat = XLSX.utils.aoa_to_sheet(categoryData);
+      wsCat['!cols'] = [{wch: 20}, {wch: 15}, {wch: 15}];
+      XLSX.utils.book_append_sheet(wb, wsCat, 'By Category');
+    }
     
-    doc.setFontSize(14);
-    doc.text('Top 20 Products by Quantity', 14, 78);
-    
-    const productData = data.topProducts.slice(0, 20).map((p, idx) => [
-      idx + 1,
-      p.productName,
-      p.category,
-      formatNumber(p.quantity),
-      formatCurrency(p.totalSales)
-    ]);
-    
-    doc.autoTable({
-      startY: 82,
-      head: [['#', 'Product', 'Category', 'Quantity', 'Sales']],
-      body: productData,
-      theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246] }
-    });
+    return wb;
   };
 
-  const generateCustomerReport = async (doc) => {
+  const generateCustomerReport = async () => {
     const response = await superstoreAPI.getCustomerAnalytics();
     const data = response.data.data;
     
-    doc.setFontSize(20);
-    doc.text('Customer Report', 14, 20);
+    const wb = XLSX.utils.book_new();
     
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
+    const customerData = [
+      ['Customer Report'],
+      ['Generated:', new Date().toLocaleDateString('en-IN')],
+      [],
+      ['Summary'],
+      ['Total Customers', data.totalCustomers || 0],
+      ['Total Orders', data.totalOrders || 0],
+      ['Average Order Value', data.avgOrderValue || 0],
+      [],
+      ['Customer Segments'],
+      ['Segment', 'Order Count', 'Total Sales', '% of Total'],
+    ];
     
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Summary', 14, 40);
-    
-    doc.setFontSize(10);
-    doc.text(`Total Customers: ${formatNumber(data.totalCustomers || 0)}`, 14, 48);
-    doc.text(`Total Orders: ${formatNumber(data.totalOrders || 0)}`, 14, 54);
-    doc.text(`Average Order Value: ${formatCurrency(data.avgOrderValue || 0)}`, 14, 60);
-    
-    if (data.segmentBreakdown && data.segmentBreakdown.length > 0) {
-      doc.setFontSize(14);
-      doc.text('Customer Segments', 14, 72);
-      
-      const segmentData = data.segmentBreakdown.map(seg => [
-        seg._id,
-        formatNumber(seg.count),
-        formatCurrency(seg.totalSales),
-        `${((seg.count / data.totalOrders) * 100).toFixed(1)}%`
-      ]);
-      
-      doc.autoTable({
-        startY: 76,
-        head: [['Segment', 'Orders', 'Total Sales', '% of Total']],
-        body: segmentData,
-        theme: 'striped',
-        headStyles: { fillColor: [139, 92, 246] }
+    if (data.segmentBreakdown) {
+      data.segmentBreakdown.forEach(seg => {
+        customerData.push([
+          seg._id,
+          seg.count,
+          seg.totalSales,
+          ((seg.count / data.totalOrders) * 100).toFixed(2)
+        ]);
       });
     }
+    
+    const ws = XLSX.utils.aoa_to_sheet(customerData);
+    ws['!cols'] = [{wch: 20}, {wch: 15}, {wch: 15}, {wch: 12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Customer Analysis');
+    
+    return wb;
   };
 
-  const generateRegionalReport = async (doc) => {
+  const generateRegionalReport = async () => {
     const response = await superstoreAPI.getSalesAnalytics({});
     const data = response.data.data;
     
-    doc.setFontSize(20);
-    doc.text('Regional Performance Report', 14, 20);
+    const wb = XLSX.utils.book_new();
     
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
+    const regionalData = [
+      ['Regional Performance Report'],
+      ['Generated:', new Date().toLocaleDateString('en-IN')],
+      [],
+      ['Regional Analysis'],
+      ['Region', 'Sales', 'Profit', 'Orders', 'Margin %']
+    ];
     
-    if (data.regionBreakdown && data.regionBreakdown.length > 0) {
-      doc.setFontSize(14);
-      doc.setTextColor(40, 40, 40);
-      doc.text('Regional Performance Analysis', 14, 40);
-      
-      const regionData = data.regionBreakdown.map(region => [
-        region._id,
-        formatCurrency(region.sales),
-        formatCurrency(region.profit),
-        region.orders.toLocaleString(),
-        `${((region.profit / region.sales) * 100).toFixed(1)}%`
-      ]);
-      
-      doc.autoTable({
-        startY: 44,
-        head: [['Region', 'Sales', 'Profit', 'Orders', 'Margin']],
-        body: regionData,
-        theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246] }
+    if (data.regionBreakdown) {
+      data.regionBreakdown.forEach(region => {
+        regionalData.push([
+          region._id,
+          region.sales,
+          region.profit,
+          region.orders,
+          ((region.profit / region.sales) * 100).toFixed(2)
+        ]);
       });
     }
+    
+    const ws = XLSX.utils.aoa_to_sheet(regionalData);
+    ws['!cols'] = [{wch: 15}, {wch: 15}, {wch: 15}, {wch: 12}, {wch: 12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Regional Performance');
+    
+    return wb;
   };
 
-  const generateCategoryReport = async (doc) => {
+  const generateCategoryReport = async () => {
     const response = await superstoreAPI.getSalesAnalytics({});
     const data = response.data.data;
     
-    doc.setFontSize(20);
-    doc.text('Category Performance Report', 14, 20);
+    const wb = XLSX.utils.book_new();
     
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
+    const categoryData = [
+      ['Category Performance Report'],
+      ['Generated:', new Date().toLocaleDateString('en-IN')],
+      [],
+      ['Category Analysis'],
+      ['Category', 'Sales', 'Profit', 'Orders', 'Margin %']
+    ];
     
-    if (data.categoryBreakdown && data.categoryBreakdown.length > 0) {
-      doc.setFontSize(14);
-      doc.setTextColor(40, 40, 40);
-      doc.text('Category Performance Analysis', 14, 40);
-      
-      const categoryData = data.categoryBreakdown.map(cat => [
-        cat._id,
-        formatCurrency(cat.sales),
-        formatCurrency(cat.profit),
-        cat.orders.toLocaleString(),
-        `${((cat.profit / cat.sales) * 100).toFixed(1)}%`
-      ]);
-      
-      doc.autoTable({
-        startY: 44,
-        head: [['Category', 'Sales', 'Profit', 'Orders', 'Margin']],
-        body: categoryData,
-        theme: 'striped',
-        headStyles: { fillColor: [139, 92, 246] }
+    if (data.categoryBreakdown) {
+      data.categoryBreakdown.forEach(cat => {
+        categoryData.push([
+          cat._id,
+          cat.sales,
+          cat.profit,
+          cat.orders,
+          ((cat.profit / cat.sales) * 100).toFixed(2)
+        ]);
       });
     }
+    
+    const ws = XLSX.utils.aoa_to_sheet(categoryData);
+    ws['!cols'] = [{wch: 20}, {wch: 15}, {wch: 15}, {wch: 12}, {wch: 12}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Category Performance');
+    
+    return wb;
   };
 
   const generateReport = async () => {
     setGenerating(true);
     try {
-      const doc = new jsPDF();
+      let wb;
       
       switch(reportType) {
         case 'sales':
-          await generateSalesReport(doc);
+          wb = await generateSalesReport();
           break;
         case 'profit':
-          await generateProfitReport(doc);
+          wb = await generateProfitReport();
           break;
         case 'inventory':
-          await generateInventoryReport(doc);
+          wb = await generateInventoryReport();
           break;
         case 'customer':
-          await generateCustomerReport(doc);
+          wb = await generateCustomerReport();
           break;
         case 'regional':
-          await generateRegionalReport(doc);
+          wb = await generateRegionalReport();
           break;
         case 'category':
-          await generateCategoryReport(doc);
+          wb = await generateCategoryReport();
           break;
         default:
-          await generateSalesReport(doc);
+          wb = await generateSalesReport();
       }
       
-      const fileName = `${reportType.charAt(0).toUpperCase() + reportType.slice(1)}_Report_${dateRange}_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(fileName);
-      toast.success('Report generated and downloaded successfully!');
+      const fileName = `${reportType.charAt(0).toUpperCase() + reportType.slice(1)}_Report_${dateRange}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success('Excel report downloaded successfully!');
     } catch (error) {
       console.error('Error generating report:', error);
       console.error('Error details:', error.response?.data || error.message);
@@ -348,14 +333,16 @@ export default function ReportsView() {
           <FileText size={32} />
           <h1 className="text-3xl font-bold">Reports & Analytics</h1>
         </div>
-        <p className="text-blue-100">Generate comprehensive reports from 100,000+ transactions</p>
+        <p className="text-blue-100">Generate comprehensive Excel reports from 100,000+ transactions</p>
       </div>
 
       {/* Report Configuration */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-200">
-        <div className="flex items-center space-x-2 mb-6">
-          <Filter size={20} className="text-slate-600" />
-          <h2 className="text-xl font-bold text-slate-900">Report Configuration</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-2">
+            <Filter size={20} className="text-slate-600" />
+            <h2 className="text-xl font-bold text-slate-900">Report Configuration</h2>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -392,7 +379,7 @@ export default function ReportsView() {
         <button
           onClick={generateReport}
           disabled={generating}
-          className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadlow-xl transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
+          className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center space-x-2"
         >
           {generating ? (
             <>
@@ -413,7 +400,7 @@ export default function ReportsView() {
         {reportTypes.map((type) => (
           <div key={type.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-200 hover:shadow-2xl transition-all">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
                 <FileText size={24} className="text-white" />
               </div>
               <button
@@ -422,47 +409,44 @@ export default function ReportsView() {
                   setReportType(type.id);
                   setGenerating(true);
                   try {
-                    console.log(`Generating ${type.name}...`);
-                    const doc = new jsPDF();
+                    let wb;
                     
                     switch(type.id) {
                       case 'sales':
-                        await generateSalesReport(doc);
+                        wb = await generateSalesReport();
                         break;
                       case 'profit':
-                        await generateProfitReport(doc);
+                        wb = await generateProfitReport();
                         break;
                       case 'inventory':
-                        await generateInventoryReport(doc);
+                        wb = await generateInventoryReport();
                         break;
                       case 'customer':
-                        await generateCustomerReport(doc);
+                        wb = await generateCustomerReport();
                         break;
                       case 'regional':
-                        await generateRegionalReport(doc);
+                        wb = await generateRegionalReport();
                         break;
                       case 'category':
-                        await generateCategoryReport(doc);
+                        wb = await generateCategoryReport();
                         break;
                     }
                     
-                    const fileName = `${type.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-                    console.log(`Saving file: ${fileName}`);
-                    doc.save(fileName);
+                    const fileName = `${type.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
                     toast.success(`${type.name} downloaded successfully!`);
                   } catch (error) {
-                    console.error('Error generating report:', error);
-                    console.error('Error response:', error.response);
-                    toast.error(error.response?.data?.message || error.message || 'Failed to generate report');
+                    console.error('Error:', error);
+                    toast.error('Failed to generate report');
                   } finally {
                     setGenerating(false);
                     setReportType(prevType);
                   }
                 }}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                title="Quick Generate"
+                title="Quick Download Excel"
               >
-                <Download size={20} className="text-slate-600" />
+                <Download size={20} className="text-green-600" />
               </button>
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-2">{type.name}</h3>
@@ -482,19 +466,19 @@ export default function ReportsView() {
         <h2 className="text-xl font-bold text-slate-900 mb-6">Recent Reports</h2>
         <div className="space-y-3">
           {[
-            { name: 'Monthly Sales Report', date: '2024-03-01', size: '2.5 MB' },
-            { name: 'Quarterly Profit Analysis', date: '2024-02-28', size: '3.2 MB' },
-            { name: 'Annual Inventory Summary', date: '2024-01-31', size: '4.1 MB' },
-            { name: 'Customer Segmentation Report', date: '2024-01-15', size: '1.8 MB' },
+            { name: 'Monthly Sales Report', date: '2024-03-01', size: '1.2 MB', format: 'Excel' },
+            { name: 'Quarterly Profit Analysis', date: '2024-02-28', size: '980 KB', format: 'Excel' },
+            { name: 'Annual Inventory Summary', date: '2024-01-31', size: '2.4 MB', format: 'Excel' },
+            { name: 'Customer Segmentation Report', date: '2024-01-15', size: '750 KB', format: 'Excel' },
           ].map((report, index) => (
             <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <FileText size={20} className="text-blue-600" />
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <FileText size={20} className="text-green-600" />
                 </div>
                 <div>
                   <p className="font-medium text-slate-900">{report.name}</p>
-                  <p className="text-sm text-slate-500">{report.date} • {report.size}</p>
+                  <p className="text-sm text-slate-500">{report.date} • {report.size} • {report.format}</p>
                 </div>
               </div>
               <button className="p-2 hover:bg-white rounded-lg transition-colors">
@@ -504,6 +488,6 @@ export default function ReportsView() {
           ))}
         </div>
       </div>
-    </div>
+   </div>
   );
 }
