@@ -103,7 +103,7 @@ export default function OrdersView() {
 
       const doc = new jsPDF('landscape');
       console.log('jsPDF instance created');
-      console.log('autoTable available:', typeof doc.autoTable);
+      console.log('autoTable function available:', typeof autoTable);
       
       // Add title
       doc.setFontSize(20);
@@ -155,7 +155,7 @@ export default function OrdersView() {
       
       console.log('Table data prepared, rows:', tableData.length);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: filterY + 18,
         head: [['Order ID', 'Date', 'Customer', 'Product', 'Category', 'Location', 'Region', 'Sales', 'Profit', 'Ship Mode']],
         body: tableData,

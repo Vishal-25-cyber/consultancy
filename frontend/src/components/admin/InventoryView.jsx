@@ -50,7 +50,7 @@ export default function InventoryView() {
       
       const doc = new jsPDF();
       console.log('jsPDF instance created');
-      console.log('autoTable available:', typeof doc.autoTable);
+      console.log('autoTable function available:', typeof autoTable);
       
       const topProducts = inventoryData.topProducts || [];
       console.log('Products count:', topProducts.length);
@@ -95,7 +95,7 @@ export default function InventoryView() {
       
       console.log('Table data prepared:', tableData.length, 'rows');
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: 82,
         head: [['#', 'Product Name', 'Category', 'Qty Sold', 'Sales', 'Profit']],
         body: tableData,

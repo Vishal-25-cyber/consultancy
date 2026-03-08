@@ -71,7 +71,7 @@ export default function AnalyticsView() {
       
       const doc = new jsPDF();
       console.log('jsPDF instance created');
-      console.log('autoTable available:', typeof doc.autoTable);
+      console.log('autoTable function available:', typeof autoTable);
       
       // Add title
       doc.setFontSize(20);
@@ -109,7 +109,7 @@ export default function AnalyticsView() {
       
       console.log('Category data prepared:', categoryData.length, 'rows');
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: 94,
         head: [['Category', 'Sales', 'Profit', 'Margin']],
         body: categoryData,
@@ -140,7 +140,7 @@ export default function AnalyticsView() {
       
       console.log('Region data prepared:', regionData.length, 'rows');
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: finalY + 4,
         head: [['Region', 'Sales', 'Profit', 'Orders', 'Margin']],
         body: regionData,
@@ -173,7 +173,7 @@ export default function AnalyticsView() {
         
         console.log('Top products data prepared:', profitableData.length, 'rows');
         
-        doc.autoTable({
+        autoTable(doc, {
           startY: 24,
           head: [['#', 'Product', 'Category', 'Profit', 'Margin']],
           body: profitableData,
