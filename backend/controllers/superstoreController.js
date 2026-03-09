@@ -350,10 +350,16 @@ export const createOrder = async (req, res) => {
       placedBy: req.user._id
     });
 
-    // Deduct stock if a ProductStock record exists for this product
+    // Deduct stock; if no record exists yet, create one with default 100 then deduct
     await ProductStock.findOneAndUpdate(
       { productName },
-      [{ $set: { currentStock: { $max: [0, { $subtract: ['$currentStock', parseInt(quantity)] }] } } }]
+      [{ $set: {
+        category: { $ifNull: ['$category', category] },
+        subCategory: { $ifNull: ['$subCategory', subCategory] },
+        currentStock: { $max: [0, { $subtract: [{ $ifNull: ['$currentStock', 100] }, parseInt(quantity)] }] },
+        reorderLevel: { $ifNull: ['$reorderLevel', 50] }
+      }}],
+      { upsert: true }
     );
 
     res.status(201).json({
@@ -399,38 +405,26 @@ export const getAvailableProducts = async (req, res) => {
       {
         $addFields: {
           stockStatus: {
-            $cond: {
-              if: '$hasStock',
-              then: {
-                $cond: {
-                  if: { $eq: ['$stockRecord.currentStock', 0] },
-                  then: 'Out of Stock',
-                  else: {
-                    $cond: {
-                      if: { $lte: ['$stockRecord.currentStock', '$stockRecord.reorderLevel'] },
-                      then: 'Low Stock',
-                      else: 'In Stock'
-                    }
-                  }
-                }
+            $let: {
+              vars: {
+                stock: { $ifNull: ['$stockRecord.currentStock', 100] },
+                reorder: { $ifNull: ['$stockRecord.reorderLevel', 50] }
               },
-              else: {
-                $cond: {
-                  if: { $lt: ['$totalSold', 5000] },
-                  then: 'Low Stock',
-                  else: {
-                    $cond: {
-                      if: { $lt: ['$totalSold', 20000] },
-                      then: 'Available',
-                      else: 'High Demand'
-                    }
-                  }
-                }
+              in: {
+                $cond: [
+                  { $eq: ['$$stock', 0] },
+                  'Out of Stock',
+                  { $cond: [
+                    { $lte: ['$$stock', '$$reorder'] },
+                    'Low Stock',
+                    'In Stock'
+                  ]}
+                ]
               }
             }
           },
-          currentStock: { $ifNull: ['$stockRecord.currentStock', null] },
-          reorderLevel: { $ifNull: ['$stockRecord.reorderLevel', null] }
+          currentStock: { $ifNull: ['$stockRecord.currentStock', 100] },
+          reorderLevel: { $ifNull: ['$stockRecord.reorderLevel', 50] }
         }
       },
       {
