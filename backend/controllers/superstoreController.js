@@ -305,7 +305,7 @@ export const createOrder = async (req, res) => {
     // Generate unique order ID
     const year = new Date().getFullYear();
     const count = await SuperstoreOrder.countDocuments();
-    const orderId = `US-${year}-${String(count + 1).padStart(7, '0')}`;
+    const orderId = `IN-${year}-${String(count + 1).padStart(7, '0')}`;
 
     // Generate customer ID if not provided
     const customerId = req.body.customerId || `${customerName.substring(0, 2).toUpperCase()}-${Math.floor(Math.random() * 90000) + 10000}`;
@@ -315,9 +315,10 @@ export const createOrder = async (req, res) => {
 
     // Calculate dates
     const orderDate = new Date();
-    const shipDays = shipMode === 'Same Day' ? 0 : 
-                     shipMode === 'First Class' ? 1 : 
-                     shipMode === 'Second Class' ? 3 : 5;
+    const shipDays = shipMode === 'Same Day' ? 0 :
+                     shipMode === 'Express Delivery' ? 2 :
+                     shipMode === 'Standard Delivery' ? 5 :
+                     shipMode === 'Economy' ? 7 : 5;
     const shipDate = new Date(orderDate.getTime() + shipDays * 24 * 60 * 60 * 1000);
 
     // Calculate profit (20-35% of sales)
