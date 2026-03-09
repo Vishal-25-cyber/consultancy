@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { superstoreAPI } from '../utils/superstoreApi';
-import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, TrendingUp } from 'lucide-react';
+import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, TrendingUp, IndianRupee, Tag, BarChart2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PlaceOrderModal from '../components/PlaceOrderModal';
 
@@ -16,6 +16,7 @@ export default function SuperstoreUser() {
   const [orders, setOrders] = useState([]);
   const [orderFilters, setOrderFilters] = useState({ search: '', category: '', region: '', segment: '' });
   const [orderPagination, setOrderPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [orderStats, setOrderStats] = useState({ total: 0, totalSpent: 0, uniqueProducts: 0, topCategory: '—' });
 
   // Products state
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -33,6 +34,7 @@ export default function SuperstoreUser() {
 
   useEffect(() => {
     fetchProducts();
+    fetchOrderStats();
   }, []);
 
   useEffect(() => {
@@ -54,6 +56,21 @@ export default function SuperstoreUser() {
     } finally {
       setLoadingOrders(false);
     }
+  };
+
+  const fetchOrderStats = async () => {
+    try {
+      // Fetch all user orders (large limit) to compute stats
+      const response = await superstoreAPI.getOrders({ page: 1, limit: 1000 });
+      const allOrders = response.data.data || [];
+      const total = response.data.pagination?.total || allOrders.length;
+      const totalSpent = allOrders.reduce((sum, o) => sum + (o.sales || 0), 0);
+      const uniqueProducts = new Set(allOrders.map(o => o.productName)).size;
+      const catCount = {};
+      allOrders.forEach(o => { catCount[o.category] = (catCount[o.category] || 0) + 1; });
+      const topCategory = Object.keys(catCount).sort((a, b) => catCount[b] - catCount[a])[0] || '—';
+      setOrderStats({ total, totalSpent, uniqueProducts, topCategory });
+    } catch { /* silent */ }
   };
 
   const fetchProducts = async () => {
@@ -81,6 +98,7 @@ export default function SuperstoreUser() {
 
   const handleOrderPlaced = () => {
     fetchOrders();
+    fetchOrderStats();
     if (activeTab !== 'orders') setActiveTab('orders');
     toast.success('Order placed! View in My Orders.');
   };
@@ -203,6 +221,46 @@ export default function SuperstoreUser() {
             </div>
           </div>
         </header>
+
+        {/* Stats Bar */}
+        <div className="px-6 pt-5 pb-0 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <ShoppingCart size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium">My Orders</p>
+              <p className="text-xl font-bold text-gray-900">{orderStats.total}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <IndianRupee size={18} className="text-green-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium">Total Spent</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(orderStats.totalSpent)}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Package size={18} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium">Unique Products</p>
+              <p className="text-xl font-bold text-gray-900">{orderStats.uniqueProducts}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <BarChart2 size={18} className="text-amber-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-gray-500 font-medium">Top Category</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{orderStats.topCategory}</p>
+            </div>
+          </div>
+        </div>
 
         {/* Page Content */}
         <main className="p-6">
