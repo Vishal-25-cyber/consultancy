@@ -148,7 +148,7 @@ export const getOrders = async (req, res) => {
 
     const total = await SuperstoreOrder.countDocuments(filter);
     const orders = await SuperstoreOrder.find(filter)
-      .sort({ orderDate: -1 })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 

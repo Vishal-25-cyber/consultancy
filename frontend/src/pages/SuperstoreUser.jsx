@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { superstoreAPI } from '../utils/superstoreApi';
-import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, TrendingUp, IndianRupee, Tag, BarChart2, Bell, Sparkles } from 'lucide-react';
+import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, TrendingUp, IndianRupee, Tag, BarChart2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PlaceOrderModal from '../components/PlaceOrderModal';
 
@@ -208,12 +208,6 @@ export default function SuperstoreUser() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {/* Notification Bell */}
-                <button className="relative w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors">
-                  <Bell size={16} className="text-gray-600" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                </button>
-
                 {/* User Profile Card */}
                 <div className="hidden sm:flex items-center gap-2.5 bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-100 rounded-2xl px-3 py-1.5 shadow-sm hover:shadow-md transition-shadow cursor-default">
                   {/* Avatar with online dot */}
