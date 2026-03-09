@@ -88,6 +88,11 @@ const superstoreOrderSchema = new mongoose.Schema({
   profit: {
     type: Number,
     required: true
+  },
+  placedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
 }, {
   timestamps: true

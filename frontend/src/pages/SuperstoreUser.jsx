@@ -2,56 +2,70 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { superstoreAPI } from '../utils/superstoreApi';
-import { Search, Filter, Package, Calendar, MapPin, DollarSign, LogOut, User, Menu, X, Plus, ShoppingCart } from 'lucide-react';
+import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, Tag, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PlaceOrderModal from '../components/PlaceOrderModal';
 
 export default function SuperstoreUser() {
-  const [loading, setLoading] = useState(false);
-  const [orders, setOrders] = useState([]);
+  const [activeTab, setActiveTab] = useState('products');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+
+  // Orders state
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [orderFilters, setOrderFilters] = useState({ search: '', category: '', region: '', segment: '' });
+  const [orderPagination, setOrderPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+
+  // Products state
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [productCategory, setProductCategory] = useState('');
+
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    search: '',
-    category: '',
-    region: '',
-    segment: ''
-  });
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0
-  });
+
+  const menuItems = [
+    { id: 'products', label: 'Products', icon: LayoutGrid },
+    { id: 'orders', label: 'My Orders', icon: ShoppingCart },
+  ];
 
   useEffect(() => {
-    fetchOrders();
-  }, [pagination.page, filters.category, filters.region, filters.segment]);
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'orders') fetchOrders();
+  }, [activeTab, orderPagination.page, orderFilters.category, orderFilters.region, orderFilters.segment]);
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
+      setLoadingOrders(true);
       const response = await superstoreAPI.getOrders({
-        page: pagination.page,
-        limit: pagination.limit,
-        ...filters
+        page: orderPagination.page,
+        limit: orderPagination.limit,
+        ...orderFilters
       });
       setOrders(response.data.data);
-      setPagination(prev => ({ ...prev, ...response.data.pagination }));
+      setOrderPagination(prev => ({ ...prev, ...response.data.pagination }));
     } catch (error) {
-      console.error('Error fetching orders:', error);
       toast.error('Failed to load orders');
     } finally {
-      setLoading(false);
+      setLoadingOrders(false);
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setPagination(prev => ({ ...prev, page: 1 }));
-    fetchOrders();
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await superstoreAPI.getAvailableProducts();
+      setProducts(response.data.data);
+    } catch (error) {
+      toast.error('Failed to load products');
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
   const handleLogout = () => {
@@ -60,330 +74,357 @@ export default function SuperstoreUser() {
     navigate('/login');
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, page: 1 }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      search: '',
-      category: '',
-      region: '',
-      segment: ''
-    });
+  const handleMenuClick = (tabId) => {
+    setActiveTab(tabId);
+    if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   const handleOrderPlaced = () => {
-    // Refresh orders list after placing a new order
     fetchOrders();
-    toast.success('Order placed! Refreshing list...');
+    if (activeTab !== 'orders') setActiveTab('orders');
+    toast.success('Order placed! View in My Orders.');
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Place Order Modal */}
-      <PlaceOrderModal 
-        isOpen={showOrderModal} 
-        onClose={() => setShowOrderModal(false)}
-        onOrderPlaced={handleOrderPlaced}
-      />
+  const formatCurrency = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+  const formatDate = (date) => new Date(date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 
-      {/* Mobile menu overlay */}
+  const categoryColors = {
+    'Packaging Materials': 'bg-blue-100 text-blue-700',
+    'Plastic Products': 'bg-purple-100 text-purple-700',
+    'Textile Products': 'bg-amber-100 text-amber-700',
+    'Accessories': 'bg-green-100 text-green-700',
+  };
+
+  const filteredProducts = products.filter(p => {
+    const matchSearch = !productSearch || p.productName.toLowerCase().includes(productSearch.toLowerCase());
+    const matchCat = !productCategory || p.category === productCategory;
+    return matchSearch && matchCat;
+  });
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <PlaceOrderModal isOpen={showOrderModal} onClose={() => setShowOrderModal(false)} onOrderPlaced={handleOrderPlaced} />
+
+      {/* Backdrop overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Top Navigation Bar */}
-      <nav className="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-lg hover:bg-slate-100"
-              >
-                {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
+      {/* Hamburger button */}
+      {!sidebarOpen && (
+        <button onClick={() => setSidebarOpen(true)} className="fixed top-5 left-5 z-50">
+          <div className="p-2.5 bg-white rounded-lg shadow-md border border-gray-200 hover:bg-gray-50 hover:border-blue-300 transition-all">
+            <Menu size={22} className="text-gray-700" />
+          </div>
+        </button>
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed top-0 left-0 z-50 h-full w-72 transform transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} bg-white border-r border-gray-200 shadow-xl`}>
+        <div className="h-full flex flex-col">
+          {/* Logo */}
+          <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Package size={24} className="text-white" />
+                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-md">
+                  <Package size={22} className="text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-slate-900">SARITHA TRADERS</h1>
-                  <p className="text-xs text-slate-500">Orders Portal</p>
+                  <h1 className="text-lg font-bold text-white">SARITHA TRADERS</h1>
+                  <p className="text-xs text-blue-100">Orders Portal</p>
                 </div>
               </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="hidden sm:flex items-center space-x-3 px-4 py-2 bg-slate-100 rounded-lg">
-                <User size={20} className="text-slate-600" />
-                <div className="text-right">
-                  <p className="text-sm font-medium text-slate-900">{user?.name || 'User'}</p>
-                  <p className="text-xs text-slate-500 capitalize">{user?.role || 'staff'}</p>
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
-              >
-                <LogOut size={18} />
-                <span className="hidden sm:inline">Logout</span>
+              <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                <X size={20} className="text-white" />
               </button>
             </div>
           </div>
-        </div>
-      </nav>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Header */}
-        <div className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h2>
-              <p className="text-blue-100">Browse through 100,000+ orders and find what you need</p>
-            </div>
-            <button
-              onClick={() => setShowOrderModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 hover:bg-blue-50 font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-105"
-            >
-              <Plus size={20} />
+          {/* Nav */}
+          <nav className="flex-1 px-3 py-4 space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button key={item.id} onClick={() => handleMenuClick(item.id)}
+                  className={`w-full group rounded-lg transition-all duration-200 ${isActive ? '' : 'hover:bg-gray-50'}`}>
+                  <div className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700'}`}>
+                    <div className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`}><Icon size={20} /></div>
+                    <span className={`font-medium text-sm ${isActive ? 'text-white' : 'text-gray-700 group-hover:text-gray-900'}`}>{item.label}</span>
+                    {isActive && <div className="ml-auto"><ChevronRight size={16} className="text-white" /></div>}
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Place Order + Logout */}
+          <div className="p-4 border-t border-gray-200 space-y-2">
+            <button onClick={() => setShowOrderModal(true)}
+              className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm">
+              <Plus size={18} />
               <span>Place Order</span>
             </button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-slate-200">
-            <p className="text-slate-600 text-sm font-medium">Total Orders</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">{pagination.total?.toLocaleString() || 0}</p>
-          </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-slate-200">
-            <p className="text-slate-600 text-sm font-medium">Current Page</p>
-            <p className="text-3xl font-bold text-purple-600 mt-1">{pagination.page} / {pagination.totalPages}</p>
-          </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-slate-200">
-            <p className="text-slate-600 text-sm font-medium">Showing</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">{orders.length} orders</p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 mb-8 border border-slate-200">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter size={20} className="text-slate-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Search & Filter Orders</h2>
-          </div>
-          
-          <form onSubmit={handleSearch} className="space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search by order ID, customer, product, state..."
-                value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                className="w-full pl-10 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <select
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              >
-                <option value="">All Categories</option>
-                <option value="Packaging Materials">Packaging Materials</option>
-                <option value="Plastic Products">Plastic Products</option>
-                <option value="Textile Products">Textile Products</option>
-                <option value="Accessories">Accessories</option>
-              </select>
-
-              {/* Region Filter */}
-              <select
-                value={filters.region}
-                onChange={(e) => handleFilterChange('region', e.target.value)}
-                className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              >
-                <option value="">All Regions</option>
-                <option value="North India">North India</option>
-                <option value="South India">South India</option>
-                <option value="East India">East India</option>
-                <option value="West India">West India</option>
-              </select>
-
-              {/* Segment Filter */}
-              <select
-                value={filters.segment}
-                onChange={(e) => handleFilterChange('segment', e.target.value)}
-                className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              >
-                <option value="">All Segments</option>
-                <option value="Wholesale">Wholesale</option>
-                <option value="Retail">Retail</option>
-                <option value="Industrial">Industrial</option>
-                <option value="Corporate">Corporate</option>
-              </select>
-
-              <button
-                type="submit"
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
-              >
-                Search
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-sm text-red-600 hover:text-red-700 font-medium"
-            >
-              Clear All Filters
+            <button onClick={handleLogout}
+              className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium text-sm shadow-sm">
+              <LogOut size={18} />
+              <span>Logout</span>
             </button>
-          </form>
-        </div>
-
-        {/* Orders Table */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Orders ({pagination.total.toLocaleString()})
-            </h2>
           </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Sales</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Profit</th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {orders.map((order) => (
-                      <tr key={order._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <Package size={16} className="text-gray-400" />
-                            <span className="text-sm font-medium text-blue-600">{order.orderId}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
-                            <div className="text-xs text-gray-500">{order.segment}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 max-w-xs truncate">
-                          <div className="text-sm text-gray-900">{order.productName}</div>
-                          <div className="text-xs text-gray-500">{order.subCategory}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            order.category === 'Technology' ? 'bg-blue-100 text-blue-700' :
-                            order.category === 'Furniture' ? 'bg-purple-100 text-purple-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                            {order.category}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1">
-                            <MapPin size={14} className="text-gray-400" />
-                            <span className="text-sm text-gray-600">{order.region}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1">
-                            <Calendar size={14} className="text-gray-400" />
-                            <span className="text-sm text-gray-600">{formatDate(order.orderDate)}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <span className="text-sm font-semibold text-blue-600">{formatCurrency(order.sales)}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <span className={`text-sm font-semibold ${order.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(order.profit)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className="text-sm text-gray-900">{order.quantity}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total.toLocaleString()} orders
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                    disabled={pagination.page === 1}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <div className="px-4 py-2 text-sm font-medium text-gray-700">
-                    Page {pagination.page} of {pagination.totalPages}
-                  </div>
-                  <button
-                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                    disabled={pagination.page >= pagination.totalPages}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
         </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className={`min-h-screen transition-all duration-300 ${sidebarOpen ? 'lg:ml-72' : 'ml-0'}`}>
+        {/* Header */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="ml-16 flex items-center space-x-3">
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                  {activeTab === 'products' ? <LayoutGrid size={18} className="text-white" /> : <ShoppingCart size={18} className="text-white" />}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{activeTab === 'products' ? 'Products' : 'My Orders'}</h2>
+                  <p className="text-xs text-gray-500">{activeTab === 'products' ? 'Browse available products' : 'Orders you have placed'}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="hidden sm:flex items-center space-x-2">
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-700">{user?.name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                  </div>
+                  <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                    {user?.name?.charAt(0) || 'U'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="p-6">
+
+          {/* ─── PRODUCTS TAB ─── */}
+          {activeTab === 'products' && (
+            <div>
+              {/* Search + Filter */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-6">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" placeholder="Search products..."
+                      value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                  </div>
+                  <select value={productCategory} onChange={e => setProductCategory(e.target.value)}
+                    className="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    <option value="">All Categories</option>
+                    <option value="Packaging Materials">Packaging Materials</option>
+                    <option value="Plastic Products">Plastic Products</option>
+                    <option value="Textile Products">Textile Products</option>
+                    <option value="Accessories">Accessories</option>
+                  </select>
+                  <button onClick={() => setShowOrderModal(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors">
+                    <Plus size={16} /> Place Order
+                  </button>
+                </div>
+              </div>
+
+              {loadingProducts ? (
+                <div className="flex items-center justify-center py-24">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-500 mb-4">{filteredProducts.length} products found</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredProducts.map((product, idx) => (
+                      <div key={idx} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-blue-200 transition-all group">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                            <Package size={20} className="text-blue-600" />
+                          </div>
+                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${categoryColors[product.category] || 'bg-gray-100 text-gray-600'}`}>
+                            {product.category}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">{product.productName}</h3>
+                        <p className="text-xs text-gray-500 mb-3">{product.subCategory}</p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <Tag size={13} />
+                            <span className="text-sm font-bold">{formatCurrency(product.price)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-400">
+                            <TrendingUp size={13} />
+                            <span className="text-xs">{product.popularity?.toLocaleString()} sold</span>
+                          </div>
+                        </div>
+                        <button onClick={() => setShowOrderModal(true)}
+                          className="mt-3 w-full py-2 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg text-xs font-semibold transition-all">
+                          Order Now
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ─── MY ORDERS TAB ─── */}
+          {activeTab === 'orders' && (
+            <div>
+              {/* Filters */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-6">
+                <div className="flex flex-col gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input type="text" placeholder="Search by order ID, product..."
+                      value={orderFilters.search}
+                      onChange={e => setOrderFilters(prev => ({ ...prev, search: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && fetchOrders()}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <select value={orderFilters.category} onChange={e => setOrderFilters(prev => ({ ...prev, category: e.target.value }))}
+                      className="px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                      <option value="">All Categories</option>
+                      <option value="Packaging Materials">Packaging Materials</option>
+                      <option value="Plastic Products">Plastic Products</option>
+                      <option value="Textile Products">Textile Products</option>
+                      <option value="Accessories">Accessories</option>
+                    </select>
+                    <select value={orderFilters.region} onChange={e => setOrderFilters(prev => ({ ...prev, region: e.target.value }))}
+                      className="px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                      <option value="">All Regions</option>
+                      <option value="North India">North India</option>
+                      <option value="South India">South India</option>
+                      <option value="East India">East India</option>
+                      <option value="West India">West India</option>
+                    </select>
+                    <select value={orderFilters.segment} onChange={e => setOrderFilters(prev => ({ ...prev, segment: e.target.value }))}
+                      className="px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                      <option value="">All Segments</option>
+                      <option value="Wholesale">Wholesale</option>
+                      <option value="Retail">Retail</option>
+                      <option value="Industrial">Industrial</option>
+                      <option value="Corporate">Corporate</option>
+                    </select>
+                    <button onClick={fetchOrders}
+                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors">
+                      Search
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Orders Count */}
+              {!loadingOrders && (
+                <p className="text-sm text-gray-500 mb-4">
+                  {orderPagination.total === 0
+                    ? 'No orders placed yet. Click "Place Order" to get started!'
+                    : `${orderPagination.total} order${orderPagination.total !== 1 ? 's' : ''} found`}
+                </p>
+              )}
+
+              {loadingOrders ? (
+                <div className="flex items-center justify-center py-24">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 py-20 text-center">
+                  <ShoppingCart size={48} className="mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-500 font-medium">No orders yet</p>
+                  <p className="text-gray-400 text-sm mt-1">Place your first order using the button in the sidebar</p>
+                  <button onClick={() => setShowOrderModal(true)}
+                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 transition-colors">
+                    <Plus size={16} /> Place Order
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Order ID</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Region</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Sales</th>
+                          <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                          <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Ship Mode</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {orders.map((order) => (
+                          <tr key={order._id} className="hover:bg-gray-50">
+                            <td className="px-5 py-3 whitespace-nowrap text-sm font-medium text-blue-600">{order.orderId}</td>
+                            <td className="px-5 py-3 max-w-xs">
+                              <div className="text-sm font-medium text-gray-900 truncate">{order.productName}</div>
+                              <div className="text-xs text-gray-400">{order.subCategory}</div>
+                            </td>
+                            <td className="px-5 py-3 whitespace-nowrap">
+                              <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${categoryColors[order.category] || 'bg-gray-100 text-gray-600'}`}>
+                                {order.category}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1 text-sm text-gray-600">
+                                <MapPin size={13} className="text-gray-400" />{order.region}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1 text-sm text-gray-600">
+                                <Calendar size={13} className="text-gray-400" />{formatDate(order.orderDate)}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3 whitespace-nowrap text-right text-sm font-semibold text-blue-600">{formatCurrency(order.sales)}</td>
+                            <td className="px-5 py-3 whitespace-nowrap text-center text-sm text-gray-700">{order.quantity}</td>
+                            <td className="px-5 py-3 whitespace-nowrap text-center">
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">{order.shipMode}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {orderPagination.totalPages > 1 && (
+                    <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+                      <p className="text-sm text-gray-500">
+                        Showing {((orderPagination.page - 1) * orderPagination.limit) + 1}–{Math.min(orderPagination.page * orderPagination.limit, orderPagination.total)} of {orderPagination.total}
+                      </p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setOrderPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                          disabled={orderPagination.page === 1}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                          Previous
+                        </button>
+                        <span className="px-3 py-1.5 text-sm text-gray-600">{orderPagination.page} / {orderPagination.totalPages}</span>
+                        <button onClick={() => setOrderPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                          disabled={orderPagination.page >= orderPagination.totalPages}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+        </main>
       </div>
     </div>
   );
 }
+

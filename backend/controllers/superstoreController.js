@@ -129,6 +129,10 @@ export const getOrders = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const filter = {};
+    // Non-admin users only see their own placed orders
+    if (req.user.role !== 'admin') {
+      filter.placedBy = req.user._id;
+    }
     if (req.query.category) filter.category = req.query.category;
     if (req.query.region) filter.region = req.query.region;
     if (req.query.segment) filter.segment = req.query.segment;
@@ -328,7 +332,7 @@ export const createOrder = async (req, res) => {
       customerId,
       customerName,
       segment,
-      country: 'United States',
+      country: 'India',
       city,
       state,
       postalCode,
@@ -340,7 +344,8 @@ export const createOrder = async (req, res) => {
       sales: parseFloat(sales),
       quantity: parseInt(quantity),
       discount: 0,
-      profit
+      profit,
+      placedBy: req.user._id
     });
 
     res.status(201).json({
