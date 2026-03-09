@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { superstoreAPI } from '../utils/superstoreApi';
-import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, Tag, TrendingUp } from 'lucide-react';
+import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PlaceOrderModal from '../components/PlaceOrderModal';
 
@@ -227,10 +227,6 @@ export default function SuperstoreUser() {
                     <option value="Textile Products">Textile Products</option>
                     <option value="Accessories">Accessories</option>
                   </select>
-                  <button onClick={() => setShowOrderModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors">
-                    <Plus size={16} /> Place Order
-                  </button>
                 </div>
               </div>
 
@@ -239,39 +235,53 @@ export default function SuperstoreUser() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <>
-                  <p className="text-sm text-gray-500 mb-4">{filteredProducts.length} products found</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredProducts.map((product, idx) => (
-                      <div key={idx} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-blue-200 transition-all group">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                            <Package size={20} className="text-blue-600" />
-                          </div>
-                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${categoryColors[product.category] || 'bg-gray-100 text-gray-600'}`}>
-                            {product.category}
-                          </span>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">{product.productName}</h3>
-                        <p className="text-xs text-gray-500 mb-3">{product.subCategory}</p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-blue-600">
-                            <Tag size={13} />
-                            <span className="text-sm font-bold">{formatCurrency(product.price)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-400">
-                            <TrendingUp size={13} />
-                            <span className="text-xs">{product.popularity?.toLocaleString()} sold</span>
-                          </div>
-                        </div>
-                        <button onClick={() => setShowOrderModal(true)}
-                          className="mt-3 w-full py-2 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg text-xs font-semibold transition-all">
-                          Order Now
-                        </button>
-                      </div>
-                    ))}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">{filteredProducts.length} products available</p>
                   </div>
-                </>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product Name</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Sub-Category</th>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
+                          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
+                          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Popularity</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredProducts.map((product, idx) => (
+                          <tr key={idx} className="hover:bg-blue-50/40 transition-colors">
+                            <td className="px-5 py-3 text-sm text-gray-400 w-10">{idx + 1}</td>
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <Package size={15} className="text-blue-600" />
+                                </div>
+                                <span className="text-sm font-medium text-gray-900">{product.productName}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3 text-sm text-gray-500">{product.subCategory}</td>
+                            <td className="px-5 py-3">
+                              <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${categoryColors[product.category] || 'bg-gray-100 text-gray-600'}`}>
+                                {product.category}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-right text-sm font-bold text-blue-600">{formatCurrency(product.price)}</td>
+                            <td className="px-5 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1 text-gray-400">
+                                <TrendingUp size={13} />
+                                <span className="text-xs">{product.popularity?.toLocaleString()}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -340,11 +350,7 @@ export default function SuperstoreUser() {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 py-20 text-center">
                   <ShoppingCart size={48} className="mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500 font-medium">No orders yet</p>
-                  <p className="text-gray-400 text-sm mt-1">Place your first order using the button in the sidebar</p>
-                  <button onClick={() => setShowOrderModal(true)}
-                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 transition-colors">
-                    <Plus size={16} /> Place Order
-                  </button>
+                  <p className="text-gray-400 text-sm mt-1">Use the "Place Order" button in the sidebar to get started</p>
                 </div>
               ) : (
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
