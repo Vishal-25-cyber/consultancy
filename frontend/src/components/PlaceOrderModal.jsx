@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ShoppingCart, Package, MapPin, Truck, User, IndianRupee, ChevronDown } from 'lucide-react';
+import { X, ShoppingCart, Package, MapPin, Truck, User, IndianRupee, ChevronDown, AlertTriangle } from 'lucide-react';
 import { superstoreAPI } from '../utils/superstoreApi';
 import toast from 'react-hot-toast';
 
@@ -66,12 +66,16 @@ export default function PlaceOrderModal({ isOpen, onClose, onOrderPlaced }) {
     }
     setLoading(true);
     try {
-      await superstoreAPI.createOrder({
+      const res = await superstoreAPI.createOrder({
         ...formData,
         quantity: parseInt(formData.quantity),
         sales: parseFloat(formData.sales) * parseInt(formData.quantity)
       });
-      toast.success('Order placed successfully!');
+      if (res.data.lowStockWarning) {
+        toast.success(`Order placed! Only ${res.data.remainingStock} unit${res.data.remainingStock !== 1 ? 's' : ''} left — admin notified to refill.`, { duration: 6000, icon: '⚠️' });
+      } else {
+        toast.success('Order placed successfully!');
+      }
       setFormData({
         productName: '', category: '', subCategory: '', quantity: 1,
         customerName: '', shipMode: 'Standard Delivery', segment: 'Wholesale',
@@ -94,6 +98,13 @@ export default function PlaceOrderModal({ isOpen, onClose, onOrderPlaced }) {
   if (!isOpen) return null;
 
   const totalPrice = formData.sales * formData.quantity;
+  const selectedProduct = products.find(p => p.productName === formData.productName) || null;
+  const availableStock = selectedProduct?.currentStock ?? 100;
+  const stockStatus = selectedProduct?.stockStatus ?? 'Available';
+  const isOutOfStock = formData.productName && (stockStatus === 'Out of Stock' || availableStock === 0);
+  const isLowStock = formData.productName && stockStatus === 'Low Stock';
+  const insufficientQty = !isOutOfStock && formData.productName && parseInt(formData.quantity) > availableStock;
+  const canSubmit = !loading && !isOutOfStock && !insufficientQty;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -158,7 +169,11 @@ export default function PlaceOrderModal({ isOpen, onClose, onOrderPlaced }) {
               <div>
                 <label className={labelCls}>Quantity *</label>
                 <input type="number" name="quantity" min="1" max="1000" value={formData.quantity}
-                  onChange={handleChange} required className={inputCls} />
+                  onChange={handleChange} required
+                  className={`${inputCls} ${insufficientQty ? 'border-red-400 ring-1 ring-red-400' : ''}`} />
+                {formData.productName && selectedProduct && (
+                  <p className="text-xs mt-1 text-gray-400">{availableStock} units available</p>
+                )}
               </div>
 
               <div>
@@ -173,9 +188,36 @@ export default function PlaceOrderModal({ isOpen, onClose, onOrderPlaced }) {
             </div>
           </section>
 
+          {/* ── Stock Warning Banner ── */}
+          {formData.productName && (isOutOfStock || isLowStock || insufficientQty) && (
+            <div className={`flex items-start gap-2.5 p-3.5 rounded-xl border ${
+              isOutOfStock || insufficientQty
+                ? 'bg-red-50 border-red-200'
+                : 'bg-orange-50 border-orange-200'
+            }`}>
+              <AlertTriangle size={16} className={`flex-shrink-0 mt-0.5 ${isOutOfStock || insufficientQty ? 'text-red-500' : 'text-orange-500'}`} />
+              <div>
+                <p className={`text-xs font-semibold ${isOutOfStock || insufficientQty ? 'text-red-700' : 'text-orange-700'}`}>
+                  {isOutOfStock
+                    ? 'Out of Stock'
+                    : insufficientQty
+                    ? 'Insufficient Stock'
+                    : 'Low Stock Alert'}
+                </p>
+                <p className={`text-xs mt-0.5 ${isOutOfStock || insufficientQty ? 'text-red-600' : 'text-orange-600'}`}>
+                  {isOutOfStock
+                    ? `"${formData.productName}" is currently out of stock. Please contact admin to refill.`
+                    : insufficientQty
+                    ? `Only ${availableStock} unit${availableStock !== 1 ? 's' : ''} available. Please reduce your quantity.`
+                    : `Only ${availableStock} unit${availableStock !== 1 ? 's' : ''} left. Order soon before it runs out!`}
+                </p>
+              </div>
+            </div>
+          )}
+
           <hr className="border-gray-100" />
 
-          {/* ── Customer ── */}
+          {/* ── Customer ── */
           <section>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-6 h-6 bg-indigo-100 rounded-md flex items-center justify-center">
@@ -255,7 +297,7 @@ export default function PlaceOrderModal({ isOpen, onClose, onOrderPlaced }) {
             className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm transition-colors">
             Cancel
           </button>
-          <button type="submit" onClick={handleSubmit} disabled={loading}
+          <button type="submit" onClick={handleSubmit} disabled={!canSubmit}
             className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-semibold text-sm transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
             {loading ? (
               <span className="flex items-center justify-center gap-2">

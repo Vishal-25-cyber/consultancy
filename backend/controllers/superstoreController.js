@@ -303,6 +303,17 @@ export const createOrder = async (req, res) => {
       sales 
     } = req.body;
 
+    // --- Stock availability check ---
+    const existingStock = await ProductStock.findOne({ productName });
+    const availableStock = existingStock?.currentStock ?? 100;
+    const qty = parseInt(quantity);
+    if (availableStock === 0) {
+      return res.status(400).json({ success: false, message: `"${productName}" is currently out of stock. Please contact admin to refill.` });
+    }
+    if (availableStock < qty) {
+      return res.status(400).json({ success: false, message: `Only ${availableStock} unit${availableStock !== 1 ? 's' : ''} of "${productName}" available. Please reduce your quantity.` });
+    }
+
     // Generate unique order ID
     const year = new Date().getFullYear();
     const count = await SuperstoreOrder.countDocuments();
@@ -351,7 +362,7 @@ export const createOrder = async (req, res) => {
     });
 
     // Deduct stock; if no record exists yet, create one with default 100 then deduct
-    await ProductStock.findOneAndUpdate(
+    const updatedStock = await ProductStock.findOneAndUpdate(
       { productName },
       [{ $set: {
         category: { $ifNull: ['$category', category] },
@@ -359,13 +370,19 @@ export const createOrder = async (req, res) => {
         currentStock: { $max: [0, { $subtract: [{ $ifNull: ['$currentStock', 100] }, parseInt(quantity)] }] },
         reorderLevel: { $ifNull: ['$reorderLevel', 50] }
       }}],
-      { upsert: true }
+      { upsert: true, new: true }
     );
+
+    const remainingStock = updatedStock?.currentStock ?? 0;
+    const reorderLevel = updatedStock?.reorderLevel ?? 50;
+    const lowStockWarning = remainingStock <= reorderLevel;
 
     res.status(201).json({
       success: true,
       message: 'Order placed successfully',
-      data: newOrder
+      data: newOrder,
+      lowStockWarning,
+      remainingStock
     });
   } catch (error) {
     console.error('Create order error:', error);

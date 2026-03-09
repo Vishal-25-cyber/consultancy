@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { superstoreAPI } from '../../utils/superstoreApi';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, Package, TrendingUp, Users, RefreshCw } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, Users, RefreshCw, AlertTriangle, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
@@ -9,10 +9,22 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 export default function DashboardView() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
+  const [lowStockItems, setLowStockItems] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
+    fetchLowStock();
   }, []);
+
+  const fetchLowStock = async () => {
+    try {
+      const res = await superstoreAPI.getAvailableProducts();
+      const items = (res.data.data || []).filter(
+        p => p.stockStatus === 'Out of Stock' || p.stockStatus === 'Low Stock'
+      );
+      setLowStockItems(items);
+    } catch { /* silent */ }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -75,6 +87,47 @@ export default function DashboardView() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Low Stock Reminder Banner ── */}
+      {lowStockItems.length > 0 && (
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Bell size={18} className="text-red-600 animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-sm font-bold text-red-800">Stock Refill Reminder</h3>
+                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {lowStockItems.length}
+                </span>
+              </div>
+              <p className="text-xs text-red-600 mb-3">
+                {lowStockItems.filter(i => i.stockStatus === 'Out of Stock').length > 0
+                  ? `${lowStockItems.filter(i => i.stockStatus === 'Out of Stock').length} product${lowStockItems.filter(i => i.stockStatus === 'Out of Stock').length !== 1 ? 's are' : ' is'} out of stock and ${lowStockItems.filter(i => i.stockStatus === 'Low Stock').length} more running low.`
+                  : `${lowStockItems.length} product${lowStockItems.length !== 1 ? 's are' : ' is'} running low on stock.`}
+                {' '}Go to the <strong>Inventory</strong> tab to update stock levels.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {lowStockItems.map((item, i) => (
+                  <span key={i}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      item.stockStatus === 'Out of Stock'
+                        ? 'bg-red-100 text-red-700 border border-red-200'
+                        : 'bg-orange-100 text-orange-700 border border-orange-200'
+                    }`}>
+                    <AlertTriangle size={10} />
+                    {item.productName}
+                    {item.currentStock !== null && item.currentStock !== undefined
+                      ? ` (${item.currentStock} left)` : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow duration-200">
