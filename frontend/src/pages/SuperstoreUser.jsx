@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { superstoreAPI } from '../utils/superstoreApi';
-import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, TrendingUp, IndianRupee, Tag, BarChart2 } from 'lucide-react';
+import { Search, Package, Calendar, MapPin, LogOut, User, Menu, X, Plus, ShoppingCart, LayoutGrid, ChevronRight, TrendingUp, IndianRupee, Tag, BarChart2, Bell, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PlaceOrderModal from '../components/PlaceOrderModal';
 
@@ -207,13 +207,30 @@ export default function SuperstoreUser() {
                   <p className="text-xs text-gray-500">{activeTab === 'products' ? 'Browse available products' : 'Orders you have placed'}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <div className="hidden sm:flex items-center space-x-2">
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-700">{user?.name}</p>
+              <div className="flex items-center gap-3">
+                {/* Notification Bell */}
+                <button className="relative w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors">
+                  <Bell size={16} className="text-gray-600" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                </button>
+
+                {/* User Profile Card */}
+                <div className="hidden sm:flex items-center gap-2.5 bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-100 rounded-2xl px-3 py-1.5 shadow-sm hover:shadow-md transition-shadow cursor-default">
+                  {/* Avatar with online dot */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-600 rounded-xl flex items-center justify-center text-sm font-extrabold text-white shadow">
+                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                   </div>
-                  <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm">
-                    {user?.name?.charAt(0) || 'U'}
+
+                  {/* Name + label */}
+                  <div className="leading-tight">
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs text-indigo-400 font-medium">Welcome back</p>
+                      <Sparkles size={10} className="text-yellow-400" />
+                    </div>
+                    <p className="text-sm font-bold text-gray-800 tracking-wide">{user?.name}</p>
                   </div>
                 </div>
               </div>
