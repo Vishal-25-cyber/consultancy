@@ -211,7 +211,6 @@ export default function SuperstoreUser() {
                 <div className="hidden sm:flex items-center space-x-2">
                   <div className="text-right">
                     <p className="text-sm font-semibold text-gray-700">{user?.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
                   </div>
                   <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm">
                     {user?.name?.charAt(0) || 'U'}
