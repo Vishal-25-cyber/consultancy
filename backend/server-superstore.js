@@ -8,6 +8,7 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import superstoreRoutes from './routes/superstore.js';
 import mlRoutes from './routes/mlRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 // Load env vars
 dotenv.config();
@@ -27,6 +28,7 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/superstore', superstoreRoutes);
 app.use('/api/ml', mlRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

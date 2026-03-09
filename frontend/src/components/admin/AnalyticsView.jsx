@@ -20,11 +20,12 @@ export default function AnalyticsView() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
+      const filters = { category: selectedCategory, region: selectedRegion, year: dateRange };
       const [salesRes, profitRes, productRes, customerRes] = await Promise.all([
-        superstoreAPI.getSalesAnalytics({ category: selectedCategory, region: selectedRegion }),
-        superstoreAPI.getProfitAnalysis(),
-        superstoreAPI.getProductAnalytics(),
-        superstoreAPI.getCustomerAnalytics()
+        superstoreAPI.getSalesAnalytics(filters),
+        superstoreAPI.getProfitAnalysis(filters),
+        superstoreAPI.getProductAnalytics(filters),
+        superstoreAPI.getCustomerAnalytics(filters)
       ]);
 
       setAnalyticsData({
@@ -193,7 +194,13 @@ export default function AnalyticsView() {
       
       // Save the PDF
       const filename = `Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(filename);
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
       console.log('PDF saved:', filename);
       toast.success('Analytics PDF downloaded successfully!');
     } catch (error) {
@@ -245,9 +252,10 @@ export default function AnalyticsView() {
               className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             >
               <option value="all">All Categories</option>
-              <option value="Furniture">Furniture</option>
-              <option value="Office Supplies">Office Supplies</option>
-              <option value="Technology">Technology</option>
+              <option value="Packaging Materials">Packaging Materials</option>
+              <option value="Plastic Products">Plastic Products</option>
+              <option value="Textile Products">Textile Products</option>
+              <option value="Accessories">Accessories</option>
             </select>
           </div>
           <div>
@@ -258,10 +266,10 @@ export default function AnalyticsView() {
               className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             >
               <option value="all">All Regions</option>
-              <option value="East">East</option>
-              <option value="West">West</option>
-              <option value="Central">Central</option>
-              <option value="South">South</option>
+              <option value="North India">North India</option>
+              <option value="South India">South India</option>
+              <option value="East India">East India</option>
+              <option value="West India">West India</option>
             </select>
           </div>
           <div>

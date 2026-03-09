@@ -63,9 +63,16 @@ export const superstoreAPI = {
   createOrder: (orderData) => apiClient.post('/superstore/orders', orderData),
   getAvailableProducts: () => apiClient.get('/superstore/products'),
   getSalesAnalytics: (params) => apiClient.get('/superstore/sales-analytics', { params }),
-  getProfitAnalysis: () => apiClient.get('/superstore/profit-analysis'),
-  getProductAnalytics: () => apiClient.get('/superstore/product-analytics'),
-  getCustomerAnalytics: () => apiClient.get('/superstore/customer-analytics'),
+  getProfitAnalysis: (params) => apiClient.get('/superstore/profit-analysis', { params }),
+  getProductAnalytics: (params) => apiClient.get('/superstore/product-analytics', { params }),
+  getCustomerAnalytics: (params) => apiClient.get('/superstore/customer-analytics', { params }),
+};
+
+// Upload API
+export const uploadAPI = {
+  uploadExcel: (formData) => apiClient.post('/upload/excel', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 };
 
 export default apiClient;

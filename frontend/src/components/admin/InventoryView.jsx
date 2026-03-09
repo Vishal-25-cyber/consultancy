@@ -117,7 +117,13 @@ export default function InventoryView() {
       
       // Save the PDF
       const filename = `Inventory_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(filename);
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
       console.log('PDF saved:', filename);
       toast.success('PDF downloaded successfully!');
     } catch (error) {

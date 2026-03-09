@@ -62,7 +62,7 @@ const Sidebar = () => {
           {/* Logo */}
           <div className="p-6 border-b border-gray-200">
             <h1 className={`font-bold text-primary-600 transition-all ${collapsed ? 'text-center text-xl' : 'text-2xl'}`}>
-              {collapsed ? 'IA' : 'Inventory Analytics'}
+              {collapsed ? 'ST' : 'Saritha Traders'}
             </h1>
           </div>
 

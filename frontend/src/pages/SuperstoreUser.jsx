@@ -61,9 +61,9 @@ export default function SuperstoreUser() {
   };
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -130,7 +130,7 @@ export default function SuperstoreUser() {
                   <Package size={24} className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-slate-900">Superstore</h1>
+                  <h1 className="text-xl font-bold text-slate-900">SARITHA TRADERS</h1>
                   <p className="text-xs text-slate-500">Orders Portal</p>
                 </div>
               </div>
@@ -219,9 +219,10 @@ export default function SuperstoreUser() {
                 className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               >
                 <option value="">All Categories</option>
-                <option value="Furniture">Furniture</option>
-                <option value="Office Supplies">Office Supplies</option>
-                <option value="Technology">Technology</option>
+                <option value="Packaging Materials">Packaging Materials</option>
+                <option value="Plastic Products">Plastic Products</option>
+                <option value="Textile Products">Textile Products</option>
+                <option value="Accessories">Accessories</option>
               </select>
 
               {/* Region Filter */}
@@ -231,10 +232,10 @@ export default function SuperstoreUser() {
                 className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               >
                 <option value="">All Regions</option>
-                <option value="East">East</option>
-                <option value="West">West</option>
-                <option value="Central">Central</option>
-                <option value="South">South</option>
+                <option value="North India">North India</option>
+                <option value="South India">South India</option>
+                <option value="East India">East India</option>
+                <option value="West India">West India</option>
               </select>
 
               {/* Segment Filter */}
@@ -244,9 +245,10 @@ export default function SuperstoreUser() {
                 className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               >
                 <option value="">All Segments</option>
-                <option value="Consumer">Consumer</option>
+                <option value="Wholesale">Wholesale</option>
+                <option value="Retail">Retail</option>
+                <option value="Industrial">Industrial</option>
                 <option value="Corporate">Corporate</option>
-                <option value="Home Office">Home Office</option>
               </select>
 
               <button

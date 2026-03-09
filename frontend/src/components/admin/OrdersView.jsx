@@ -75,9 +75,9 @@ export default function OrdersView() {
   };
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -181,7 +181,13 @@ export default function OrdersView() {
       
       // Save the PDF
       const filename = `Orders_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(filename);
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
       console.log('PDF saved:', filename);
       toast.success('Orders PDF downloaded successfully!');
     } catch (error) {
@@ -272,9 +278,10 @@ export default function OrdersView() {
               className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             >
               <option value="">All Categories</option>
-              <option value="Furniture">Furniture</option>
-              <option value="Office Supplies">Office Supplies</option>
-              <option value="Technology">Technology</option>
+              <option value="Packaging Materials">Packaging Materials</option>
+              <option value="Plastic Products">Plastic Products</option>
+              <option value="Textile Products">Textile Products</option>
+              <option value="Accessories">Accessories</option>
             </select>
 
             <select
@@ -283,10 +290,10 @@ export default function OrdersView() {
               className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             >
               <option value="">All Regions</option>
-              <option value="East">East</option>
-              <option value="West">West</option>
-              <option value="Central">Central</option>
-              <option value="South">South</option>
+              <option value="North India">North India</option>
+              <option value="South India">South India</option>
+              <option value="East India">East India</option>
+              <option value="West India">West India</option>
             </select>
 
             <select
@@ -295,9 +302,10 @@ export default function OrdersView() {
               className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             >
               <option value="">All Segments</option>
-              <option value="Consumer">Consumer</option>
+              <option value="Wholesale">Wholesale</option>
+              <option value="Retail">Retail</option>
+              <option value="Industrial">Industrial</option>
               <option value="Corporate">Corporate</option>
-              <option value="Home Office">Home Office</option>
             </select>
 
             <select
@@ -306,10 +314,10 @@ export default function OrdersView() {
               className="px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             >
               <option value="">All Ship Modes</option>
-              <option value="Standard Class">Standard Class</option>
-              <option value="Second Class">Second Class</option>
-              <option value="First Class">First Class</option>
+              <option value="Standard Delivery">Standard Delivery</option>
+              <option value="Express Delivery">Express Delivery</option>
               <option value="Same Day">Same Day</option>
+              <option value="Economy">Economy</option>
             </select>
           </div>
 

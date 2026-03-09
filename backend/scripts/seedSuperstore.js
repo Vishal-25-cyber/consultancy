@@ -5,98 +5,135 @@ import User from '../models/User.js';
 
 dotenv.config();
 
-// Real Superstore retail dataset configuration
+// Company product categories - Packaging, Plastic, Textile, Accessories
 const categories = {
-  'Furniture': ['Bookcases', 'Chairs', 'Furnishings', 'Tables'],
-  'Office Supplies': ['Appliances', 'Art', 'Binders', 'Envelopes', 'Fasteners', 'Labels', 'Paper', 'Storage', 'Supplies'],
-  'Technology': ['Accessories', 'Copiers', 'Machines', 'Phones']
+  'Packaging Materials': ['Bale Tape', 'Brown Tape', 'Cardboard Box', 'Stretch Film', 'Bubble Wrap'],
+  'Plastic Products': ['HM Plastic', 'PP Cover', 'LD Plastic', 'Touch Film', 'Plastic Rolls'],
+  'Textile Products': ['Woven Fabric', 'PP Woven Bag', 'HDPE Fabric', 'Laminated Fabric'],
+  'Accessories': ['Clip', 'Marker Ink', 'Staple Pin', 'Packing Rope', 'Corner Guard']
 };
 
 const products = {
-  'Bookcases': [
-    'Bush Somerset Collection Bookcase',
-    'Atlantic Metals Mobile 3-Shelf Bookcases',
-    'O\'Sullivan Living Dimensions 3-Shelf Bookcases',
-    'Hon 8-Shelf Metal Bookcase',
-    'Sauder Camden County Barrister Bookcase'
+  'Bale Tape': [
+    'Bale Tape 48mm x 50m',
+    'Bale Tape 72mm x 65m',
+    'Bale Tape 48mm x 100m Heavy Duty',
+    'Bale Tape 60mm x 50m Industrial'
   ],
-  'Chairs': [
-    'Hon 5400 Series Task Chairs',
-    'Global Troy Executive Leather Low-Back Tilter',
-    'Novimex Executive Leather Armchair',
-    'Hon Pagoda Stacking Chairs',
-    'Bush Westfield Collection Leather Guest Chair',
-    'Chromcraft Bull-Nose Wood Oval Conference Tables & Chairs',
-    'Hon Executive Leather Chairs'
+  'Brown Tape': [
+    'Brown Tape 2 inch x 50m',
+    'Brown Tape 3 inch x 65m',
+    'Brown Tape 2 inch x 100m',
+    'Brown Tape 4 inch x 50m Heavy Duty',
+    'Brown Tape Self Adhesive 48mm'
   ],
-  'Furnishings': [
-    'Eldon Wave Desk Accessories',
-    'Tenex Traditional Chairmats',
-    'Howard Miller 13-3/4" Diameter Brentwood Wall Clock',
-    'Artistic Insta-Cover Pool Table Cover'
+  'Cardboard Box': [
+    'Cardboard Box 12x10x8 inch 3 Ply',
+    'Cardboard Box 18x14x12 inch 5 Ply',
+    'Cardboard Box 24x18x18 inch 7 Ply',
+    'Cardboard Box 9x6x4 inch 3 Ply',
+    'Cardboard Box Heavy Duty 20x16x14 inch'
   ],
-  'Tables': [
-    'Bretford CR4500 Series Slim Rectangular Table',
-    'Chromcraft Rectangular Conference Tables',
-    'Bretford Rectangular Conference Room Tables',
-    'Lesro Sheffield Collection Coffee Table'
+  'Stretch Film': [
+    'Stretch Film 500mm x 300m',
+    'Stretch Film 400mm x 200m',
+    'Stretch Film Pre-Stretch 500mm',
+    'Hand Stretch Film 100mm x 300m'
   ],
-  'Appliances': [
-    'Cuisinart Toaster Oven',
-    'Hamilton Beach RefrigeratorOven',
-    'Hoover Upright Vacuum',
-    'Holmes HEPA Air Purifier'
+  'Bubble Wrap': [
+    'Bubble Wrap Roll 50cm x 50m',
+    'Bubble Wrap Roll 100cm x 50m',
+    'Anti-Static Bubble Wrap 50cm x 50m',
+    'Large Bubble Wrap 1m x 50m'
   ],
-  'Art': [
-    'Eldon Executive Woodline II Desk Accessories',
-    'Bretford Rectangular Shaped Conference Tables',
-    'Chromcraft Rectangular Conference Tables'
+  'HM Plastic': [
+    'HM Plastic Bag 12x16 inch 50 Micron',
+    'HM Plastic Bag 16x20 inch 60 Micron',
+    'HM Plastic Bag 20x24 inch 80 Micron',
+    'HM Plastic Roll 48 inch 100 Micron',
+    'HM Plastic Bag 10x14 inch 40 Micron'
   ],
-  'Binders': [
-    'Wilson Jones Hanging View Binder',
-    'GBC Standard Plastic Binding Systems Combs',
-    'Acco Pressboard Covers with Storage Hooks',
-    'Wilson Jones Active Use Binders'
+  'PP Cover': [
+    'PP Cover Transparent 12x18 inch',
+    'PP Cover Frosted 16x22 inch',
+    'PP Cover Heavy Duty 20x28 inch',
+    'PP Cover 24x32 inch Industrial Grade'
   ],
-  'Envelopes': [
-    'Recycled Interoffice Envelopes with String',
-    'Security-Tint Envelopes',
-    'Airmail Envelopes',
-    'Poly String Tie Envelopes'
+  'LD Plastic': [
+    'LD Plastic Bag 12x18 inch 40 Micron',
+    'LD Plastic Bag 18x24 inch 50 Micron',
+    'LD Plastic Roll 50cm 60 Micron',
+    'LD Plastic Bag Zip Lock 10x15 inch'
   ],
-  'Fasteners': [
-    'Advantus Panel Wall Clips',
-    'Acco7 Prong Paper Fasteners',
-    'Staples',
-    'Rubber Bands'
+  'Touch Film': [
+    'Touch Film Gloss 1m x 100m',
+    'Touch Film Matte 1m x 100m',
+    'Touch Film Soft 750mm x 100m',
+    'Touch Film Premium Gloss 1.2m x 100m'
   ],
-  'Labels': [
-    'Avery Durable Slant Ring Binders',
-    'Self-Adhesive Address Labels',
-    'Avery Hi-Liter EverBold Pen Style Fluorescent Highlighters',
-    'Avery Round Ring Label Protectors'
+  'Plastic Rolls': [
+    'Plastic Roll Clear 48 inch 80 Micron',
+    'Plastic Roll Black 36 inch 100 Micron',
+    'Plastic Roll Colored 24 inch 60 Micron',
+    'Plastic Roll Industrial 60 inch 120 Micron'
   ],
-  'Paper': [
-    'Xerox 1967',
-    'Xerox 1980',
-    'Xerox 1952',
-    'Southworth 25% Cotton Premium Laser Paper',
-    'Hammermill CopyPlus Copy Paper',
-    'Rediform S.O.S. Phone Message Books'
+  'Woven Fabric': [
+    'PP Woven Fabric 60 GSM Natural',
+    'PP Woven Fabric 80 GSM White',
+    'PP Woven Fabric 100 GSM Colored',
+    'HDPE Woven Fabric 90 GSM',
+    'Laminated Woven Fabric 120 GSM'
   ],
-  'Storage': [
-    'Fellowes PB500 Electric Punch Plastic Comb Binding Machine',
-    'Eldon File Cart',
-    'Fellowes Bankers Box Stor/Drawer',
-    'Hon Every-Day File Sorter',
-    'Sterilite File Boxes'
+  'PP Woven Bag': [
+    'PP Woven Bag 25kg Capacity',
+    'PP Woven Bag 50kg Capacity',
+    'PP Woven Bag with Liner 25kg',
+    'PP Woven Bag HDPE 50kg',
+    'PP Woven Bag Printed 25kg'
   ],
-  'Supplies': [
-    'Eldon Jumbo ProFile Portable File Box',
-    'Dixon Ticonderoga Woodcase Pencils',
-    'Newell 318',
-    'Sanford Liquid Accent Tank-Style Highlighters',
-    'Wirebound Service Call Books'
+  'HDPE Fabric': [
+    'HDPE Fabric 90 GSM Natural',
+    'HDPE Fabric 120 GSM UV Stabilized',
+    'HDPE Woven Fabric 150 GSM Industrial',
+    'HDPE Shade Net Fabric 75%'
+  ],
+  'Laminated Fabric': [
+    'Laminated PP Fabric 90 GSM',
+    'Laminated HDPE Fabric 120 GSM',
+    'Laminated Woven Fabric Waterproof 100 GSM',
+    'Bopp Laminated Woven Bag 25kg'
+  ],
+  'Clip': [
+    'Binder Clip 19mm Small Pack of 100',
+    'Binder Clip 32mm Medium Pack of 50',
+    'Binder Clip 51mm Large Pack of 12',
+    'Foldback Clip Heavy Duty 41mm',
+    'Spring Clip Stainless Steel 25mm'
+  ],
+  'Marker Ink': [
+    'Marker Ink Black 500ml',
+    'Marker Ink Blue 500ml',
+    'Marker Ink Red 500ml',
+    'Industrial Marker Ink 1 Litre',
+    'Permanent Marker Ink 250ml'
+  ],
+  'Staple Pin': [
+    'Staple Pin 24/6 Box of 5000',
+    'Staple Pin 26/6 Box of 5000',
+    'Heavy Duty Staple Pin 23/13',
+    'Staple Pin 26/8 Box of 2000'
+  ],
+  'Packing Rope': [
+    'Packing Rope PP 2mm 100m',
+    'Packing Rope Jute 5mm 50m',
+    'Packing Rope HDPE 4mm 200m',
+    'Nylon Packing Rope 3mm 100m'
+  ],
+  'Corner Guard': [
+    'Corner Guard L-Type 50x50x5mm 1m',
+    'Corner Guard L-Type 75x75x5mm 1m',
+    'Corner Guard Foam 35x35mm 1m',
+    'Corner Guard Cardboard 50x50mm 2m'
   ],
   'Accessories': [
     'Logitech Wireless Gaming Headset',
@@ -125,38 +162,66 @@ const products = {
   ]
 };
 
-const shipModes = ['Standard Class', 'Second Class', 'First Class', 'Same Day'];
-const segments = ['Consumer', 'Corporate', 'Home Office'];
-const regions = ['East', 'West', 'Central', 'South'];
+const shipModes = ['Standard Delivery', 'Express Delivery', 'Same Day', 'Economy'];
+const segments = ['Wholesale', 'Retail', 'Industrial', 'Corporate'];
+const regions = ['North India', 'South India', 'East India', 'West India'];
 
 const statesByRegion = {
-  'East': ['New York', 'Pennsylvania', 'New Jersey', 'Massachusetts', 'Connecticut', 'Rhode Island', 'Vermont'],
-  'West': ['California', 'Washington', 'Oregon', 'Nevada', 'Arizona', 'Colorado', 'Utah'],
-  'Central': ['Illinois', 'Ohio', 'Michigan', 'Indiana', 'Wisconsin', 'Minnesota', 'Iowa'],
-  'South': ['Texas', 'Florida', 'Georgia', 'North Carolina', 'Virginia', 'Tennessee', 'Louisiana']
+  'North India': ['Delhi', 'Uttar Pradesh', 'Haryana', 'Punjab', 'Rajasthan', 'Uttarakhand', 'Himachal Pradesh'],
+  'South India': ['Tamil Nadu', 'Kerala', 'Karnataka', 'Andhra Pradesh', 'Telangana'],
+  'East India': ['West Bengal', 'Odisha', 'Bihar', 'Jharkhand', 'Assam'],
+  'West India': ['Maharashtra', 'Gujarat', 'Madhya Pradesh', 'Goa', 'Chhattisgarh']
 };
 
 const cities = {
-  'New York': ['New York City', 'Buffalo', 'Rochester', 'Albany', 'Syracuse'],
-  'California': ['Los Angeles', 'San Francisco', 'San Diego', 'San Jose', 'Sacramento'],
-  'Texas': ['Houston', 'Dallas', 'Austin', 'San Antonio', 'Fort Worth'],
-  'Florida': ['Miami', 'Orlando', 'Tampa', 'Jacksonville', 'Fort Lauderdale'],
-  'Illinois': ['Chicago', 'Springfield', 'Naperville', 'Aurora', 'Rockford'],
-  'Pennsylvania': ['Philadelphia', 'Pittsburgh', 'Harrisburg', 'Allentown'],
-  'Ohio': ['Columbus', 'Cleveland', 'Cincinnati', 'Toledo', 'Akron'],
-  'Georgia': ['Atlanta', 'Augusta', 'Savannah', 'Athens', 'Macon'],
-  'Washington': ['Seattle', 'Spokane', 'Tacoma', 'Vancouver', 'Bellevue'],
-  'Massachusetts': ['Boston', 'Worcester', 'Springfield', 'Cambridge']
+  'Delhi': ['New Delhi', 'Dwarka', 'Rohini', 'Janakpuri', 'Laxmi Nagar'],
+  'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Agra', 'Varanasi', 'Noida', 'Ghaziabad', 'Meerut'],
+  'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala', 'Hisar'],
+  'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda'],
+  'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Bikaner', 'Ajmer'],
+  'Uttarakhand': ['Dehradun', 'Haridwar', 'Rishikesh', 'Roorkee'],
+  'Himachal Pradesh': ['Shimla', 'Manali', 'Dharamshala', 'Solan'],
+  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Tiruppur', 'Erode'],
+  'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam'],
+  'Karnataka': ['Bengaluru', 'Mysuru', 'Mangaluru', 'Hubballi', 'Belagavi'],
+  'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Tirupati', 'Nellore'],
+  'Telangana': ['Hyderabad', 'Warangal', 'Karimnagar', 'Nizamabad', 'Khammam'],
+  'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri'],
+  'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur'],
+  'Bihar': ['Patna', 'Gaya', 'Muzaffarpur', 'Bhagalpur', 'Darbhanga'],
+  'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Deoghar'],
+  'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon'],
+  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad', 'Solapur', 'Thane'],
+  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Gandhinagar'],
+  'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur', 'Ujjain'],
+  'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa'],
+  'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg']
 };
 
 const companyNames = [
-  'Office Solutions', 'Business Supplies Inc', 'Corporate Furnishings', 'Tech Enterprises',
-  'Modern Office Co', 'Supply Depot', 'Office Essentials', 'Business Plus',
-  'Executive Offices', 'Tech Solutions Ltd', 'Office Pro', 'Workspace Inc'
+  'Raj Packaging Industries', 'Sri Lakshmi Plastics', 'Ganesh Textile Traders',
+  'Shree Ram Packaging', 'National Poly Pack', 'Bharat Plastics Co',
+  'Vinayak Industries', 'Sunrise Packaging Pvt Ltd', 'Anand Poly Products',
+  'Mahavir Plastic Works', 'Balaji Packaging Solutions', 'Sai Industries',
+  'Triveni Poly Pack', 'Om Shakthi Packaging', 'Krishna Packaging Works',
+  'Indus Packaging Pvt Ltd', 'Premier Poly Products', 'Elite Packaging Co',
+  'Reliable Plastics', 'Star Packaging Industries', 'Global Poly Pack',
+  'Surya Packaging', 'Durga Plastik', 'Shanthi Packaging Solutions',
+  'Apex Poly Industries', 'Sree Venkateshwara Traders', 'Prime Packaging Co',
+  'Unity Packing Materials', 'Excel Industries', 'Mahalakshmi Plastics'
 ];
 
-const firstNames = ['Aaron', 'Adam', 'Alex', 'Alice', 'Anna', 'Ben', 'Brian', 'Carlos', 'Chris', 'David', 'Emma', 'Frank', 'Grace', 'Helen', 'Jack'];
-const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
+const firstNames = [
+  'Rajesh', 'Suresh', 'Mahesh', 'Ramesh', 'Dinesh', 'Ganesh', 'Naresh',
+  'Priya', 'Anita', 'Sunita', 'Kavita', 'Rekha', 'Meena', 'Geeta',
+  'Arun', 'Vijay', 'Ajay', 'Sanjay', 'Ravi', 'Sunil', 'Anil', 'Mukesh',
+  'Amit', 'Sumit', 'Rohit', 'Mohit', 'Deepak', 'Prakash', 'Rakesh', 'Vikas'
+];
+const lastNames = [
+  'Sharma', 'Verma', 'Gupta', 'Singh', 'Kumar', 'Patel', 'Shah', 'Joshi',
+  'Mehta', 'Nair', 'Pillai', 'Reddy', 'Rao', 'Iyer', 'Naidu', 'Agarwal',
+  'Malhotra', 'Khanna', 'Bhatia', 'Kapoor', 'Chopra', 'Saxena', 'Mishra'
+];
 
 // Utility functions
 const randomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -291,7 +356,7 @@ const seedDatabase = async () => {
           country: 'India',
           city: city,
           state: state,
-          postalCode: String(randomNumber(100000, 999999)),
+          postalCode: String(randomNumber(110001, 799999)),
           region: region,
           productId: generateProductId(category, subCategory),
           category: category,
@@ -318,16 +383,17 @@ const seedDatabase = async () => {
     console.log('   Users: 2');
     console.log('   Orders: 100000');
     console.log(`   Product Categories: ${Object.keys(categories).length}`);
-    console.log(`   Regions: ${regions.length}`);
+    console.log(`   Regions: ${regions.length} (North India, South India, East India, West India)`);
     console.log('   Date Range: 2021-2025');
+    console.log('   Country: India (21 States, 100+ Cities)');
     console.log('\n📦 Product Categories:');
-    console.log('   - Packaging Materials (Bale Tape, Brown Tape, Cardboard Box, etc.)');
-    console.log('   - Plastic Products (HM Plastic, PP Cover, LD Plastic, Touch Film)');
-    console.log('   - Textile Products (Woven Fabric)');
-    console.log('   - Accessories (Clip, Marker Ink)');
+    console.log('   - Packaging Materials (Bale Tape, Brown Tape, Cardboard Box, Stretch Film, Bubble Wrap)');
+    console.log('   - Plastic Products (HM Plastic, PP Cover, LD Plastic, Touch Film, Plastic Rolls)');
+    console.log('   - Textile Products (Woven Fabric, PP Woven Bag, HDPE Fabric, Laminated Fabric)');
+    console.log('   - Accessories (Clip, Marker Ink, Staple Pin, Packing Rope, Corner Guard)');
     console.log('\n🔑 Login Credentials:');
     console.log('   Admin - Email: admin@superstore.com, Password: admin123');
-    console.log('   User - Email: user@superstore.com, Password: user123\n');
+    console.log('   User  - Email: user@superstore.com,  Password: user123\n');
 
     process.exit(0);
   } catch (error) {

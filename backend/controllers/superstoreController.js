@@ -167,7 +167,7 @@ export const getOrders = async (req, res) => {
 // Get sales analytics
 export const getSalesAnalytics = async (req, res) => {
   try {
-    const { category, region } = req.query;
+    const { category, region, year } = req.query;
     
     // Build match filter
     const matchFilter = {};
@@ -176,6 +176,10 @@ export const getSalesAnalytics = async (req, res) => {
     }
     if (region && region !== 'all') {
       matchFilter.region = region;
+    }
+    if (year && year !== 'all') {
+      const y = parseInt(year);
+      matchFilter.orderDate = { $gte: new Date(`${y}-01-01`), $lt: new Date(`${y + 1}-01-01`) };
     }
 
     // Total sales with filter
@@ -391,8 +395,19 @@ export const getAvailableProducts = async (req, res) => {
 
 export const getProfitAnalysis = async (req, res) => {
   try {
+    const { category, region, year } = req.query;
+    const matchFilter = {};
+    if (category && category !== 'all') matchFilter.category = category;
+    if (region && region !== 'all') matchFilter.region = region;
+    if (year && year !== 'all') {
+      const y = parseInt(year);
+      matchFilter.orderDate = { $gte: new Date(`${y}-01-01`), $lt: new Date(`${y + 1}-01-01`) };
+    }
+    const matchStage = Object.keys(matchFilter).length > 0 ? [{ $match: matchFilter }] : [];
+
     // Calculate overall profit metrics
     const overallStats = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: null,
@@ -413,6 +428,7 @@ export const getProfitAnalysis = async (req, res) => {
 
     // Top profitable products
     const topProfitable = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$productName',
@@ -447,6 +463,7 @@ export const getProfitAnalysis = async (req, res) => {
 
     // Low margin products
     const lowMargin = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$productName',
@@ -481,6 +498,7 @@ export const getProfitAnalysis = async (req, res) => {
 
     // Category profitability
     const categoryProfit = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$category',
@@ -532,8 +550,19 @@ export const getProfitAnalysis = async (req, res) => {
 // Get product analytics for inventory view
 export const getProductAnalytics = async (req, res) => {
   try {
+    const { category, region, year } = req.query;
+    const matchFilter = {};
+    if (category && category !== 'all') matchFilter.category = category;
+    if (region && region !== 'all') matchFilter.region = region;
+    if (year && year !== 'all') {
+      const y = parseInt(year);
+      matchFilter.orderDate = { $gte: new Date(`${y}-01-01`), $lt: new Date(`${y + 1}-01-01`) };
+    }
+    const matchStage = Object.keys(matchFilter).length > 0 ? [{ $match: matchFilter }] : [];
+
     // Total products and quantities
     const productStats = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: null,
@@ -547,6 +576,7 @@ export const getProductAnalytics = async (req, res) => {
 
     // Category breakdown
     const categoryBreakdown = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$category',
@@ -568,6 +598,7 @@ export const getProductAnalytics = async (req, res) => {
 
     // Top products by quantity
     const topProducts = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$productName',
@@ -615,11 +646,24 @@ export const getProductAnalytics = async (req, res) => {
 // Get customer analytics
 export const getCustomerAnalytics = async (req, res) => {
   try {
+    const { category, region, year } = req.query;
+    const matchFilter = {};
+    if (category && category !== 'all') matchFilter.category = category;
+    if (region && region !== 'all') matchFilter.region = region;
+    if (year && year !== 'all') {
+      const y = parseInt(year);
+      matchFilter.orderDate = { $gte: new Date(`${y}-01-01`), $lt: new Date(`${y + 1}-01-01`) };
+    }
+    const matchStage = Object.keys(matchFilter).length > 0 ? [{ $match: matchFilter }] : [];
+
     // Total unique customers
-    const totalCustomers = await SuperstoreOrder.distinct('customerId').then(ids => ids.length);
+    const totalCustomers = matchStage.length > 0
+      ? await SuperstoreOrder.distinct('customerId', matchFilter).then(ids => ids.length)
+      : await SuperstoreOrder.distinct('customerId').then(ids => ids.length);
 
     // Customer segmentation by segment
     const segmentDistribution = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$segment',
@@ -642,6 +686,7 @@ export const getCustomerAnalytics = async (req, res) => {
 
     // Top customers by sales
     const topCustomers = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$customerId',
@@ -671,6 +716,7 @@ export const getCustomerAnalytics = async (req, res) => {
 
     // Regional customer distribution
     const regionalDistribution = await SuperstoreOrder.aggregate([
+      ...matchStage,
       {
         $group: {
           _id: '$region',

@@ -3,10 +3,7 @@ import axios from 'axios';
 const API_URL = 'http://localhost:5000/api/ml';
 
 // Get auth token
-const getAuthToken = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  return user.token;
-};
+const getAuthToken = () => localStorage.getItem('token');
 
 // Configure axios with auth
 const axiosConfig = () => ({

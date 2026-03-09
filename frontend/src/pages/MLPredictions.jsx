@@ -12,8 +12,8 @@ const MLPredictions = () => {
 
   // Sales prediction form
   const [salesForm, setSalesForm] = useState({
-    productName: 'Woven Fabric',
-    category: 'Textile Products',
+    productName: 'Bale Tape 48mm x 50m',
+    category: 'Packaging Materials',
     region: 'North India',
     segment: 'Wholesale',
     quantity: 100,
@@ -23,7 +23,7 @@ const MLPredictions = () => {
 
   // Demand prediction form
   const [demandForm, setDemandForm] = useState({
-    productName: 'Cardboard Box',
+    productName: 'Cardboard Box 12x10x8 inch 3 Ply',
     month: new Date().getMonth() + 1
   });
   const [demandPrediction, setDemandPrediction] = useState(null);
@@ -36,12 +36,34 @@ const MLPredictions = () => {
   });
   const [segmentPrediction, setSegmentPrediction] = useState(null);
 
-  const products = ['Woven Fabric', 'Bale Tape', 'Clip', 'Brown Paper', 'HM Plastic', 
-                   'PP Cover', 'Marker Ink', 'LD Plastic', 'Touch Film', 'Brown Tape', 
-                   'Cardboard Box', 'Carry Cover'];
+  const products = [
+    // Packaging Materials
+    'Bale Tape 48mm x 50m', 'Bale Tape 72mm x 65m', 'Bale Tape 48mm x 100m Heavy Duty', 'Bale Tape 60mm x 50m Industrial',
+    'Brown Tape 2 inch x 50m', 'Brown Tape 3 inch x 65m', 'Brown Tape 2 inch x 100m', 'Brown Tape 4 inch x 50m Heavy Duty', 'Brown Tape Self Adhesive 48mm',
+    'Cardboard Box 12x10x8 inch 3 Ply', 'Cardboard Box 18x14x12 inch 5 Ply', 'Cardboard Box 24x18x18 inch 7 Ply', 'Cardboard Box 9x6x4 inch 3 Ply', 'Cardboard Box Heavy Duty 20x16x14 inch',
+    'Stretch Film 500mm x 300m', 'Stretch Film 400mm x 200m', 'Stretch Film Pre-Stretch 500mm', 'Hand Stretch Film 100mm x 300m',
+    'Bubble Wrap Roll 50cm x 50m', 'Bubble Wrap Roll 100cm x 50m', 'Anti-Static Bubble Wrap 50cm x 50m', 'Large Bubble Wrap 1m x 50m',
+    // Plastic Products
+    'HM Plastic Bag 12x16 inch 50 Micron', 'HM Plastic Bag 16x20 inch 60 Micron', 'HM Plastic Bag 20x24 inch 80 Micron', 'HM Plastic Roll 48 inch 100 Micron', 'HM Plastic Bag 10x14 inch 40 Micron',
+    'PP Cover Transparent 12x18 inch', 'PP Cover Frosted 16x22 inch', 'PP Cover Heavy Duty 20x28 inch', 'PP Cover 24x32 inch Industrial Grade',
+    'LD Plastic Bag 12x18 inch 40 Micron', 'LD Plastic Bag 18x24 inch 50 Micron', 'LD Plastic Roll 50cm 60 Micron', 'LD Plastic Bag Zip Lock 10x15 inch',
+    'Touch Film Gloss 1m x 100m', 'Touch Film Matte 1m x 100m', 'Touch Film Soft 750mm x 100m', 'Touch Film Premium Gloss 1.2m x 100m',
+    'Plastic Roll Clear 48 inch 80 Micron', 'Plastic Roll Black 36 inch 100 Micron', 'Plastic Roll Colored 24 inch 60 Micron', 'Plastic Roll Industrial 60 inch 120 Micron',
+    // Textile Products
+    'PP Woven Fabric 60 GSM Natural', 'PP Woven Fabric 80 GSM White', 'PP Woven Fabric 100 GSM Colored', 'HDPE Woven Fabric 90 GSM', 'Laminated Woven Fabric 120 GSM',
+    'PP Woven Bag 25kg Capacity', 'PP Woven Bag 50kg Capacity', 'PP Woven Bag with Liner 25kg', 'PP Woven Bag HDPE 50kg', 'PP Woven Bag Printed 25kg',
+    'HDPE Fabric 90 GSM Natural', 'HDPE Fabric 120 GSM UV Stabilized', 'HDPE Woven Fabric 150 GSM Industrial', 'HDPE Shade Net Fabric 75%',
+    'Laminated PP Fabric 90 GSM', 'Laminated HDPE Fabric 120 GSM', 'Laminated Woven Fabric Waterproof 100 GSM', 'Bopp Laminated Woven Bag 25kg',
+    // Accessories
+    'Binder Clip 19mm Small Pack of 100', 'Binder Clip 32mm Medium Pack of 50', 'Binder Clip 51mm Large Pack of 12', 'Foldback Clip Heavy Duty 41mm', 'Spring Clip Stainless Steel 25mm',
+    'Marker Ink Black 500ml', 'Marker Ink Blue 500ml', 'Marker Ink Red 500ml', 'Industrial Marker Ink 1 Litre', 'Permanent Marker Ink 250ml',
+    'Staple Pin 24/6 Box of 5000', 'Staple Pin 26/6 Box of 5000', 'Heavy Duty Staple Pin 23/13', 'Staple Pin 26/8 Box of 2000',
+    'Packing Rope PP 2mm 100m', 'Packing Rope Jute 5mm 50m', 'Packing Rope HDPE 4mm 200m', 'Nylon Packing Rope 3mm 100m',
+    'Corner Guard L-Type 50x50x5mm 1m', 'Corner Guard L-Type 75x75x5mm 1m', 'Corner Guard Foam 35x35mm 1m', 'Corner Guard Cardboard 50x50mm 2m',
+  ];
 
   const categories = ['Packaging Materials', 'Plastic Products', 'Textile Products', 'Accessories'];
-  const regions = ['North India', 'South India', 'East India', 'West India', 'Central India'];
+  const regions = ['North India', 'South India', 'East India', 'West India'];
   const segments = ['Wholesale', 'Retail', 'Industrial', 'Corporate'];
 
   useEffect(() => {

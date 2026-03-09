@@ -84,8 +84,8 @@ export default function AdminLayout({ children, activeTab, setActiveTab }) {
                   <BarChart3 size={24} className="text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-white">Superstore</h1>
-                  <p className="text-xs text-blue-100 font-medium">Analytics Platform</p>
+                  <h1 className="text-xl font-bold text-white">SARITHA TRADERS</h1>
+                  <p className="text-xs text-blue-100 font-medium">Packaging Materials Merchant</p>
                 </div>
               </div>
               <button
