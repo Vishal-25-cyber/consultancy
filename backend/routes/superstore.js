@@ -9,7 +9,9 @@ import {
   getProductAnalytics,
   getCustomerAnalytics,
   getStockLevels,
-  updateStock
+  updateStock,
+  getStockAlerts,
+  dismissStockAlert
 } from '../controllers/superstoreController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -37,5 +39,7 @@ router.get('/customer-analytics', getCustomerAnalytics);
 // Stock management
 router.get('/stock', getStockLevels);
 router.post('/stock', updateStock);
+router.get('/stock-alerts', getStockAlerts);
+router.patch('/stock-alerts/:id/dismiss', dismissStockAlert);
 
 export default router;

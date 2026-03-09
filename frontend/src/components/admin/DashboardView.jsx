@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { superstoreAPI } from '../../utils/superstoreApi';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, Package, TrendingUp, Users, RefreshCw, AlertTriangle, Bell } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, Users, RefreshCw, AlertTriangle, Bell, UserX, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
@@ -10,10 +10,12 @@ export default function DashboardView() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [stockAlerts, setStockAlerts] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
     fetchLowStock();
+    fetchStockAlerts();
   }, []);
 
   const fetchLowStock = async () => {
@@ -23,6 +25,20 @@ export default function DashboardView() {
         p => p.stockStatus === 'Out of Stock' || p.stockStatus === 'Low Stock'
       );
       setLowStockItems(items);
+    } catch { /* silent */ }
+  };
+
+  const fetchStockAlerts = async () => {
+    try {
+      const res = await superstoreAPI.getStockAlerts();
+      setStockAlerts(res.data.data || []);
+    } catch { /* silent */ }
+  };
+
+  const dismissAlert = async (id) => {
+    try {
+      await superstoreAPI.dismissStockAlert(id);
+      setStockAlerts(prev => prev.filter(a => a._id !== id));
     } catch { /* silent */ }
   };
 
@@ -124,6 +140,60 @@ export default function DashboardView() {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Blocked Order Attempts ── */}
+      {stockAlerts.length > 0 && (
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <UserX size={16} className="text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-purple-900">Blocked Order Attempts</h3>
+                <p className="text-xs text-purple-500">Users who tried to order but were blocked due to stock issues</p>
+              </div>
+              <span className="bg-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">
+                {stockAlerts.length}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {stockAlerts.map(alert => (
+              <div key={alert._id}
+                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border ${
+                  alert.reason === 'out_of_stock'
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-orange-50 border-orange-200'
+                }`}>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <AlertTriangle size={14} className={alert.reason === 'out_of_stock' ? 'text-red-500 flex-shrink-0' : 'text-orange-500 flex-shrink-0'} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{alert.productName}</p>
+                    <p className="text-xs text-gray-500">
+                      <span className="font-medium text-gray-700">{alert.requestedByName}</span>
+                      {' '}tried to order <span className="font-medium">{alert.attemptedQty} units</span>
+                      {' '}—{' '}
+                      <span className={alert.reason === 'out_of_stock' ? 'text-red-600 font-semibold' : 'text-orange-600 font-semibold'}>
+                        {alert.reason === 'out_of_stock' ? 'Out of Stock' : `Only ${alert.availableStock} available`}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs text-gray-400">
+                    {new Date(alert.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <button onClick={() => dismissAlert(alert._id)}
+                    className="p-1 hover:bg-gray-200 rounded-lg transition-colors" title="Dismiss">
+                    <X size={13} className="text-gray-400" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

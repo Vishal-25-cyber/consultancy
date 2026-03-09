@@ -1,5 +1,6 @@
 import SuperstoreOrder from '../models/SuperstoreOrder.js';
 import ProductStock from '../models/ProductStock.js';
+import StockAlert from '../models/StockAlert.js';
 
 // Get dashboard overview
 export const getDashboardOverview = async (req, res) => {
@@ -308,9 +309,29 @@ export const createOrder = async (req, res) => {
     const availableStock = existingStock?.currentStock ?? 100;
     const qty = parseInt(quantity);
     if (availableStock === 0) {
+      await StockAlert.create({
+        productName,
+        category: req.body.category || '',
+        subCategory: req.body.subCategory || '',
+        attemptedQty: qty,
+        availableStock: 0,
+        reason: 'out_of_stock',
+        requestedBy: req.user._id,
+        requestedByName: req.user.name || req.user.email || 'Unknown User'
+      });
       return res.status(400).json({ success: false, message: `"${productName}" is currently out of stock. Please contact admin to refill.` });
     }
     if (availableStock < qty) {
+      await StockAlert.create({
+        productName,
+        category: req.body.category || '',
+        subCategory: req.body.subCategory || '',
+        attemptedQty: qty,
+        availableStock,
+        reason: 'insufficient_stock',
+        requestedBy: req.user._id,
+        requestedByName: req.user.name || req.user.email || 'Unknown User'
+      });
       return res.status(400).json({ success: false, message: `Only ${availableStock} unit${availableStock !== 1 ? 's' : ''} of "${productName}" available. Please reduce your quantity.` });
     }
 
@@ -873,6 +894,28 @@ export const updateStock = async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
     res.json({ success: true, data: stock });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET stock alerts (failed order attempts) — admin only
+export const getStockAlerts = async (req, res) => {
+  try {
+    const alerts = await StockAlert.find({ dismissed: false })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json({ success: true, data: alerts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PATCH dismiss a stock alert — admin only
+export const dismissStockAlert = async (req, res) => {
+  try {
+    await StockAlert.findByIdAndUpdate(req.params.id, { dismissed: true });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
