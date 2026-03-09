@@ -145,22 +145,31 @@ export default function DashboardView() {
       )}
 
       {/* ── Blocked Order Attempts ── */}
-      {stockAlerts.length > 0 && (
-        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <UserX size={16} className="text-purple-600" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-purple-900">Blocked Order Attempts</h3>
-                <p className="text-xs text-purple-500">Users who tried to order but were blocked due to stock issues</p>
-              </div>
-              <span className="bg-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">
-                {stockAlerts.length}
-              </span>
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <UserX size={16} className="text-purple-600" />
             </div>
+            <div>
+              <h3 className="text-sm font-bold text-purple-900">Blocked Order Attempts</h3>
+              <p className="text-xs text-purple-500">Users blocked due to insufficient / out-of-stock</p>
+            </div>
+            <span className="bg-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">
+              {stockAlerts.length}
+            </span>
           </div>
+          <button onClick={fetchStockAlerts}
+            className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1 hover:underline">
+            <RefreshCw size={12} /> Refresh
+          </button>
+        </div>
+        {stockAlerts.length === 0 ? (
+          <div className="text-center py-6 text-purple-300">
+            <UserX size={28} className="mx-auto mb-2 opacity-50" />
+            <p className="text-xs text-purple-400">No blocked attempts — all orders are going through fine.</p>
+          </div>
+        ) : (
           <div className="space-y-2">
             {stockAlerts.map(alert => (
               <div key={alert._id}
@@ -195,8 +204,8 @@ export default function DashboardView() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
