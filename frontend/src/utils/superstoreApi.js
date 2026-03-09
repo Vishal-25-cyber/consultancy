@@ -66,6 +66,8 @@ export const superstoreAPI = {
   getProfitAnalysis: (params) => apiClient.get('/superstore/profit-analysis', { params }),
   getProductAnalytics: (params) => apiClient.get('/superstore/product-analytics', { params }),
   getCustomerAnalytics: (params) => apiClient.get('/superstore/customer-analytics', { params }),
+  getStockLevels: () => apiClient.get('/superstore/stock'),
+  updateStock: (data) => apiClient.post('/superstore/stock', data),
 };
 
 // Upload API

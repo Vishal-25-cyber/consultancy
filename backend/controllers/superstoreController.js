@@ -1,4 +1,5 @@
 import SuperstoreOrder from '../models/SuperstoreOrder.js';
+import ProductStock from '../models/ProductStock.js';
 
 // Get dashboard overview
 export const getDashboardOverview = async (req, res) => {
@@ -349,6 +350,12 @@ export const createOrder = async (req, res) => {
       placedBy: req.user._id
     });
 
+    // Deduct stock if a ProductStock record exists for this product
+    await ProductStock.findOneAndUpdate(
+      { productName },
+      [{ $set: { currentStock: { $max: [0, { $subtract: ['$currentStock', parseInt(quantity)] }] } } }]
+    );
+
     res.status(201).json({
       success: true,
       message: 'Order placed successfully',
@@ -376,13 +383,67 @@ export const getAvailableProducts = async (req, res) => {
         }
       },
       {
+        $lookup: {
+          from: 'productstocks',
+          localField: '_id.productName',
+          foreignField: 'productName',
+          as: 'stockInfo'
+        }
+      },
+      {
+        $addFields: {
+          stockRecord: { $arrayElemAt: ['$stockInfo', 0] },
+          hasStock: { $gt: [{ $size: '$stockInfo' }, 0] }
+        }
+      },
+      {
+        $addFields: {
+          stockStatus: {
+            $cond: {
+              if: '$hasStock',
+              then: {
+                $cond: {
+                  if: { $eq: ['$stockRecord.currentStock', 0] },
+                  then: 'Out of Stock',
+                  else: {
+                    $cond: {
+                      if: { $lte: ['$stockRecord.currentStock', '$stockRecord.reorderLevel'] },
+                      then: 'Low Stock',
+                      else: 'In Stock'
+                    }
+                  }
+                }
+              },
+              else: {
+                $cond: {
+                  if: { $lt: ['$totalSold', 5000] },
+                  then: 'Low Stock',
+                  else: {
+                    $cond: {
+                      if: { $lt: ['$totalSold', 20000] },
+                      then: 'Available',
+                      else: 'High Demand'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          currentStock: { $ifNull: ['$stockRecord.currentStock', null] },
+          reorderLevel: { $ifNull: ['$stockRecord.reorderLevel', null] }
+        }
+      },
+      {
         $project: {
           _id: 0,
           productName: '$_id.productName',
           category: '$_id.category',
           subCategory: '$_id.subCategory',
           price: { $round: ['$avgPrice', 2] },
-          popularity: '$totalSold'
+          popularity: '$totalSold',
+          currentStock: 1,
+          reorderLevel: 1,
+          stockStatus: 1
         }
       },
       { $sort: { popularity: -1 } },
@@ -763,6 +824,45 @@ export const getCustomerAnalytics = async (req, res) => {
     });
   } catch (error) {
     console.error('Customer analytics error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─── Stock Management ─────────────────────────────────────────────────────────
+
+// GET all stock levels (admin)
+export const getStockLevels = async (req, res) => {
+  try {
+    const stocks = await ProductStock.find({}).sort({ currentStock: 1 });
+    res.json({ success: true, data: stocks });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// POST set/update stock for a product (admin)
+export const updateStock = async (req, res) => {
+  try {
+    const { productName, category, subCategory, currentStock, reorderLevel } = req.body;
+    if (!productName) {
+      return res.status(400).json({ success: false, message: 'productName is required' });
+    }
+    const updateData = {
+      lastRestockedBy: req.user._id,
+      lastRestockedAt: new Date()
+    };
+    if (currentStock !== undefined) updateData.currentStock = Math.max(0, parseInt(currentStock));
+    if (reorderLevel !== undefined) updateData.reorderLevel = Math.max(1, parseInt(reorderLevel));
+    if (category) updateData.category = category;
+    if (subCategory) updateData.subCategory = subCategory;
+
+    const stock = await ProductStock.findOneAndUpdate(
+      { productName },
+      { $set: updateData },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+    res.json({ success: true, data: stock });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };

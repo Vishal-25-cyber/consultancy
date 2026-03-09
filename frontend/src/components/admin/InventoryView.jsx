@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { superstoreAPI } from '../../utils/superstoreApi';
-import { Package, TrendingUp, TrendingDown, AlertCircle, BarChart3, Download } from 'lucide-react';
+import { Package, TrendingUp, TrendingDown, AlertCircle, BarChart3, Download, Edit2, Check, X, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -10,9 +10,72 @@ export default function InventoryView() {
   const [loading, setLoading] = useState(true);
   const [inventoryData, setInventoryData] = useState({});
 
+  // Stock management state
+  const [stockProducts, setStockProducts] = useState([]);
+  const [loadingStock, setLoadingStock] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editValues, setEditValues] = useState({ currentStock: '', reorderLevel: '' });
+  const [savingStock, setSavingStock] = useState(false);
+
   useEffect(() => {
     fetchInventory();
+    fetchStockProducts();
   }, []);
+
+  const fetchStockProducts = async () => {
+    try {
+      setLoadingStock(true);
+      const res = await superstoreAPI.getAvailableProducts();
+      setStockProducts(res.data.data);
+    } catch (e) {
+      console.error('Stock fetch error:', e);
+    } finally {
+      setLoadingStock(false);
+    }
+  };
+
+  const startEdit = (product) => {
+    setEditingProduct(product.productName);
+    setEditValues({
+      currentStock: product.currentStock ?? 100,
+      reorderLevel: product.reorderLevel ?? 50
+    });
+  };
+
+  const handleSaveStock = async (product) => {
+    setSavingStock(true);
+    try {
+      await superstoreAPI.updateStock({
+        productName: product.productName,
+        category: product.category,
+        subCategory: product.subCategory,
+        currentStock: editValues.currentStock,
+        reorderLevel: editValues.reorderLevel
+      });
+      toast.success(`Stock updated for ${product.productName}`);
+      setEditingProduct(null);
+      fetchStockProducts();
+    } catch (e) {
+      toast.error('Failed to update stock');
+    } finally {
+      setSavingStock(false);
+    }
+  };
+
+  const stockBadgeClass = (status) => {
+    switch (status) {
+      case 'Out of Stock': return 'bg-red-100 text-red-700';
+      case 'Low Stock':    return 'bg-orange-100 text-orange-700';
+      case 'In Stock':     return 'bg-green-100 text-green-700';
+      case 'Available':    return 'bg-green-100 text-green-700';
+      case 'High Demand':  return 'bg-amber-100 text-amber-700';
+      default:             return 'bg-gray-100 text-gray-500';
+    }
+  };
+
+  const lowStockItems = stockProducts.filter(p =>
+    p.stockStatus === 'Out of Stock' || p.stockStatus === 'Low Stock'
+  );
 
   const fetchInventory = async () => {
     try {
@@ -149,6 +212,121 @@ export default function InventoryView() {
 
   return (
     <div className="space-y-6">
+
+      {/* ─── STOCK MANAGEMENT ─── */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-slate-200">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Stock Management</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Set stock levels per product. Users see live availability badges.</p>
+          </div>
+          <button onClick={fetchStockProducts}
+            className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+            <RefreshCw size={14} className={loadingStock ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
+
+        {/* Low-stock alert banner */}
+        {lowStockItems.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle size={15} className="text-red-500" />
+              <span className="text-red-700 font-semibold text-sm">
+                {lowStockItems.length} product{lowStockItems.length > 1 ? 's need' : ' needs'} restocking
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {lowStockItems.map((item, i) => (
+                <span key={i} className="bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full text-xs font-medium">
+                  {item.productName}{item.currentStock !== null ? ` (${item.currentStock} left)` : ''}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stock table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Product</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Category</th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Current Stock</th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Reorder At</th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {stockProducts.map((product, idx) => (
+                <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 max-w-[220px] truncate">{product.productName}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{product.category}</td>
+                  <td className="px-4 py-3 text-center">
+                    {editingProduct === product.productName ? (
+                      <input
+                        type="number" min="0"
+                        value={editValues.currentStock}
+                        onChange={e => setEditValues(v => ({ ...v, currentStock: e.target.value }))}
+                        className="w-20 text-center border border-blue-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <span className="font-bold text-slate-800 text-sm">
+                        {product.currentStock !== null && product.currentStock !== undefined ? product.currentStock : '—'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {editingProduct === product.productName ? (
+                      <input
+                        type="number" min="1"
+                        value={editValues.reorderLevel}
+                        onChange={e => setEditValues(v => ({ ...v, reorderLevel: e.target.value }))}
+                        className="w-20 text-center border border-blue-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <span className="text-sm text-slate-500">{product.reorderLevel ?? '50'}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${stockBadgeClass(product.stockStatus)}`}>
+                      {product.stockStatus || 'Available'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {editingProduct === product.productName ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleSaveStock(product)}
+                          disabled={savingStock}
+                          className="w-7 h-7 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg flex items-center justify-center transition-colors"
+                        >
+                          <Check size={13} />
+                        </button>
+                        <button
+                          onClick={() => setEditingProduct(null)}
+                          className="w-7 h-7 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg flex items-center justify-center transition-colors"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEdit(product)}
+                        className="flex items-center gap-1.5 mx-auto bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        <Edit2 size={11} /> Set Stock
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">

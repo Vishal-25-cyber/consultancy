@@ -113,6 +113,17 @@ export default function SuperstoreUser() {
     'Accessories': 'bg-green-100 text-green-700',
   };
 
+  const stockBadgeClass = (status) => {
+    switch (status) {
+      case 'Out of Stock': return 'bg-red-100 text-red-700';
+      case 'Low Stock':    return 'bg-orange-100 text-orange-700';
+      case 'In Stock':     return 'bg-green-100 text-green-700';
+      case 'Available':    return 'bg-green-100 text-green-700';
+      case 'High Demand':  return 'bg-amber-100 text-amber-700';
+      default:             return 'bg-gray-100 text-gray-500';
+    }
+  };
+
   const filteredProducts = products.filter(p => {
     const matchSearch = !productSearch || p.productName.toLowerCase().includes(productSearch.toLowerCase());
     const matchCat = !productCategory || p.category === productCategory;
@@ -315,6 +326,7 @@ export default function SuperstoreUser() {
                           <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Product Name</th>
                           <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Sub-Category</th>
                           <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
+                          <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Stock</th>
                           <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Price</th>
                           <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Popularity</th>
                         </tr>
@@ -336,6 +348,14 @@ export default function SuperstoreUser() {
                               <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${categoryColors[product.category] || 'bg-gray-100 text-gray-600'}`}>
                                 {product.category}
                               </span>
+                            </td>
+                            <td className="px-5 py-3 text-center">
+                              <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${stockBadgeClass(product.stockStatus)}`}>
+                                {product.stockStatus || 'Available'}
+                              </span>
+                              {product.currentStock !== null && product.currentStock !== undefined && (
+                                <p className="text-xs text-gray-400 mt-0.5">{product.currentStock} units</p>
+                              )}
                             </td>
                             <td className="px-5 py-3 text-right text-sm font-bold text-blue-600">{formatCurrency(product.price)}</td>
                             <td className="px-5 py-3 text-right">
